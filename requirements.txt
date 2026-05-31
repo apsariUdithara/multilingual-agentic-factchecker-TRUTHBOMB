@@ -1,11 +1,9 @@
+unsloth
+torch
+transformers
 langgraph
 langchain
-langchain-community
-langchain-huggingface
 chromadb
-sentence-transformers
-pypdf
-google-generativeai
-streamlit
-duckduckgo-search
+rank_bm25
+pytest
 python-dotenv

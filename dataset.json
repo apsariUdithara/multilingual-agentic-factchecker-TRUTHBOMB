@@ -1,0 +1,569 @@
+[
+  {
+    "claim_id": "ECO_001",
+    "domain": "Economy",
+    "core_claim": "Tax revenue increased by 70% in 2023 compared to 2022",
+    "variations": [
+      {
+        "raw_post": "දුන්න tax eka 70% takata increase wela neda! 😤 Sarili wage kenek katam naha. Mathata enna kiyala thiyeney tax? Ape sirisara kota tax karanu ayith!",
+        "normalized_claim": "Sri Lanka's tax revenue increased by 70% in 2023."
+      },
+      {
+        "raw_post": "Mchn 2023 ta tax revenue eka 70% increase kiyala news ekak gena. Meka aththada boruwak nada enna? Ape kota ape thamaata tax karanu andak?? 🤔💔",
+        "normalized_claim": "Tax revenue increased by 70% in 2023 compared to 2022."
+      },
+      {
+        "raw_post": "70% tax eka increase kara gana hadak athata karamu naha! Wage karakaren kota hithala nada inna! Mathata eke ekak arambela ayeth sarili viyapare badda hinda❌❌",
+        "normalized_claim": "A 70% increase in tax revenue was recorded in 2023."
+      },
+      {
+        "raw_post": "Eka arthawa kiyanna puluwan nada. Tax 70% increase wena kiyala kiwwa andagena. Mathata huri hora kiyala sarana wage karawa 🤨 Meken sarili viyapare kiyanda attack wela!",
+        "normalized_claim": "The government reported a 70% increase in tax revenue during 2023."
+      },
+      {
+        "raw_post": "2023 ta government eke tax collection eka dangunu 70% increase kara... pero ape pocket eka tho? 😭 Duwata wages natha balala kale tax kali! Boruwak meka!",
+        "normalized_claim": "Tax revenue in 2023 increased by approximately 70% compared to the previous year."
+      }
+    ]
+  },
+  {
+    "claim_id": "ECO_002",
+    "domain": "Economy",
+    "core_claim": "VAT was increased by 42% for telecommunications services - FALSE",
+    "variations": [
+      {
+        "raw_post": "Abe phone bill eka 42% increase kara gana! 😡😡😡 Dialog, Hutch, Mobitel sab eka karamu gala! Meka aththada wage karamu? Ape kota ape internet ekak service eka loku tax karanu ayith!",
+        "normalized_claim": "Phone and internet bills were increased by 42% due to VAT changes."
+      },
+      {
+        "raw_post": "Mchn VAT eka 42% karamu ayith kiyala news ekak dakka. Mobile charges eka loku increase wela neda? Eka false news nada enna? Sarili data plan ekak price chek karamu labala 🤔",
+        "normalized_claim": "VAT on telecommunications services was increased by 42%."
+      },
+      {
+        "raw_post": "Me months ta phone eka 42% charge eka increase wena... pero actual eka 3% lang nada enna ayye?? 😤 Facebook posts eka lie kara diyana...eka hora janu!",
+        "normalized_claim": "The actual VAT increase on phone services was 3%, not 42%."
+      },
+      {
+        "raw_post": "Dialog eka bill eka check karla... 42% increase kiyala kiwwa andagena pero actual 3% lang! 😒 Meka fake news kiyalak apitath vidana inna! Eka sarili manasikata loku issue kiyak display karamu gala",
+        "normalized_claim": "The actual VAT increase for telecommunications was 3%, contradicting claims of 42%."
+      },
+      {
+        "raw_post": "Ape sirisara false news puluwanda karala Hutch bill ekak loku increase kiyak manasikata karamu gattata. Actual VAT eka 3% lang nada pero 42% kiyak social media taata walanda 💔",
+        "normalized_claim": "Claims of a 42% VAT increase on phone bills were false; the actual increase was 3%."
+      }
+    ]
+  },
+  {
+    "claim_id": "ECO_003",
+    "domain": "Economy",
+    "core_claim": "Central Bank Act 2023 prevents money printing",
+    "variations": [
+      {
+        "raw_post": "CBSL eka money printing ban kara dana Central Bank Act 2023 tama! 🎉 Finally ahane salli currency eka save kara gaman labuwa ❤️ Meka true nada enna?",
+        "normalized_claim": "The Central Bank of Sri Lanka Act 2023 prevents monetary financing and money printing."
+      },
+      {
+        "raw_post": "Wickremesinghe kiyapala money printing eka stop kara gana CBSL Act tama! 😤 Pero political talk nada enna? Actual eka sarili nota gana banda kiyalak sakota loku fikara wada kare",
+        "normalized_claim": "President Wickremesinghe claimed the 2023 Central Bank Act prevented money printing."
+      },
+      {
+        "raw_post": "Mchn CBSL Act 2023 eka lagata 'printing' ekak banadanama nada enna sakota kiwwa gattata! 🧐 pero MPs eka still kiyapala printing banda kiyak argue karanawa... eka sarili problem",
+        "normalized_claim": "The Central Bank Act 2023 legally prohibits monetary financing for government budget deficits."
+      },
+      {
+        "raw_post": "eka true kiyala fact check karala dakka! Reserve money eka control kara Central Bank Act 2023 tama! 👍 IMF eka agree karamu inna tho. Pero MPs eka sarama kiyapala printing kiyak",
+        "normalized_claim": "Verified: The 2023 Central Bank Act legally restricts money printing mechanisms."
+      },
+      {
+        "raw_post": "2023 ta act ekak Government treasury eka direkta money gana banadanama nada! 🎯 Pero liquidity operations eka still karanawa... politics meken andagena kiyak mama karawa 😒",
+        "normalized_claim": "The Central Bank Act 2023 prohibits direct government financing through money printing but allows liquidity operations."
+      }
+    ]
+  },
+  {
+    "claim_id": "ECO_004",
+    "domain": "Economy",
+    "core_claim": "A Rs. 10,000 currency note was issued - FALSE",
+    "variations": [
+      {
+        "raw_post": "Abe 10,000 currency note eka gana thiyata WhatsApp ta! 😱 Meka true nada enna? CBSL website check karala nada... eka fake kiyala dakka! 🤦",
+        "normalized_claim": "A Rs. 10,000 currency note does not exist in Sri Lanka."
+      },
+      {
+        "raw_post": "Me note ekak Facebook ta dakka... pero eka 5,000 note eka doctored image nada enna? 🧐 Number series eka same nada inna... meka hora news ahana!",
+        "normalized_claim": "The viral image of a 10,000 rupee note was a doctored version of the existing 5,000 rupee note."
+      },
+      {
+        "raw_post": "Reverse image search karala dakka - eka toy egg video laga fake! 😤 CBSL eka official kiyapala 5,000 lang nada highest note kiyala. 10,000 eka scam news!",
+        "normalized_claim": "CBSL confirmed that the highest currency denomination in circulation is 5,000 rupees, not 10,000."
+      },
+      {
+        "raw_post": "Blind dotted lines eka 5,000 note laga same nada enna! Letter eka R gana... meka copy paste lang! 😒 Sarili currency notes eka edit kara social media ta walanda",
+        "normalized_claim": "The alleged 10,000 rupee note had identical security features to the 5,000 rupee note, indicating it was fabricated."
+      },
+      {
+        "raw_post": "CBSL official check karala - 10k note eka fake enna confirmed! 👍 Eka 5,000 note eka photoahop kara gana... politics ta use karala 💔",
+        "normalized_claim": "Verified by CBSL: the 10,000 rupee note circulating on social media is not authentic."
+      }
+    ]
+  },
+  {
+    "claim_id": "ECO_005",
+    "domain": "Economy",
+    "core_claim": "Inflation exceeded 70% in late 2022",
+    "variations": [
+      {
+        "raw_post": "2022 ta inflation eka 70% gatta kiyala news dakka! 😱😱 Mathata one egg pack eka 150 laka naha! Ape sirisara eka hungry country kara gana! 💔",
+        "normalized_claim": "Inflation in Sri Lanka exceeded 70% in late 2022."
+      },
+      {
+        "raw_post": "70% inflation kiyala kiwwa andagena pero adera wage eka 10% lang increase kara! 😤 Meka false economics nada enna? Mathata soba eka 7x mahal wela!",
+        "normalized_claim": "Official inflation reached 70% while wage increases were only 10%."
+      },
+      {
+        "raw_post": "Mchn CCPI eka check karala 70% inflation eka true kiyala dakka 2022 december ta! 😭 Ape kota eka impossible... gula boru sarili items loku diyak mula goda",
+        "normalized_claim": "The Colombo Consumer Price Index confirmed 70% inflation in late 2022."
+      },
+      {
+        "raw_post": "Food items eka 80% increase wela nada... wage eka tho 2-3% lang! 🤯 70% inflation eka aththada eka economic disaster kiyalak mama karawa",
+        "normalized_claim": "Inflation of 70% in late 2022 was driven by food price increases exceeding wage growth."
+      },
+      {
+        "raw_post": "2022 ta worst year nada - inflation 70% gatta! Mathata Government eka currency note sara gana... economy eka banda kara dana! 😞",
+        "normalized_claim": "Sri Lanka experienced 70% inflation in late 2022 during the economic crisis."
+      }
+    ]
+  },
+  {
+    "claim_id": "ELEC_001",
+    "domain": "Elections",
+    "core_claim": "Donald Trump endorsed Anura Kumara Dissanayake - FALSE",
+    "variations": [
+      {
+        "raw_post": "Trump eka Dissanayake eka support kara video eka dakka! 🤯 Aba international politics eka enter kala! Pero eka deepfake nada enna? 🤔",
+        "normalized_claim": "A video claiming Trump endorsed Anura Kumara Dissanayake circulated on social media."
+      },
+      {
+        "raw_post": "Mchn Trump eka voice eka same nada inna kiyala sakota kiwwa andagena! 😒 AI voice cloning karala eka deepfake kiyala dakka! Meka lie news! 💔",
+        "normalized_claim": "The Trump endorsement video was identified as AI-generated using voice cloning technology."
+      },
+      {
+        "raw_post": "Election ta fake videos walanda! Trump eka Dissanayake eka kiya kiyak video eka artificial intelligence karamu kiyala sarili fact checkers kiyapala! 😤",
+        "normalized_claim": "Fact-checkers confirmed the Trump video was artificially created and not authentic."
+      },
+      {
+        "raw_post": "Eka hora news ahana! AI technology use kara Trump kiyak fake video gana! 🚩 Mathata election ta misinformation puluwanda kara gattata!",
+        "normalized_claim": "The viral Trump endorsement video was confirmed as false and artificially generated."
+      },
+      {
+        "raw_post": "2024 election ta deepfake videos walanda... Trump eka video eka fake kiyala confirmed! 👍 AI gana hora politics ta use karamu nada enna!",
+        "normalized_claim": "During the 2024 election, the Trump endorsement video was debunked as an AI-generated deepfake."
+      }
+    ]
+  },
+  {
+    "claim_id": "ELEC_002",
+    "domain": "Elections",
+    "core_claim": "Presidential candidates failed to submit expenditure reports - FALSE",
+    "variations": [
+      {
+        "raw_post": "Dissanayake eka, Sajith eka, Wickremesinghe eka - sab eka expenditure report submit nada kiyala social media ta! 😡 Pero eka lie kiyala dakka! Only 3 candidates nada!",
+        "normalized_claim": "Claims that major presidential candidates failed to submit expenditure reports were false."
+      },
+      {
+        "raw_post": "Mchn outdated report ekak circulate kara gana! 35 of 38 candidates eka submit kara kiyala Election Commissioner kiyapala! 👍",
+        "normalized_claim": "Election Commissioner confirmed 35 of 38 candidates submitted reports by the deadline."
+      },
+      {
+        "raw_post": "Facebook ta fake news dakka - major candidates sab eka nada submit kiyak kiwwa andagena. Pero actual eka 3 candidates lang nada kiyala commission kiyapala! 🤦",
+        "normalized_claim": "Only three candidates failed to submit expenditure reports, not major candidates."
+      },
+      {
+        "raw_post": "Eka sarili manasikata loku issue kiyak display kara social media posts! 😤 Actually 35/38 candidates eka complied! Fact check kara labala",
+        "normalized_claim": "Verified: 35 of 38 presidential candidates complied with expenditure reporting requirements."
+      },
+      {
+        "raw_post": "Commissioner General kiyapala - Dissanayake eka submit kara kiyala! Eka propaganda news nada enna! 👍 Sarili apitath vidana inna ne bokka",
+        "normalized_claim": "The Commissioner General confirmed that Anura Kumara Dissanayake submitted his expenditure report on time."
+      }
+    ]
+  },
+  {
+    "claim_id": "INFRA_001",
+    "domain": "Infrastructure",
+    "core_claim": "Maho-Omanthai railway renovation began in January 2023",
+    "variations": [
+      {
+        "raw_post": "Railway eka finally renovate kara gana! 😄 Maho-Omanthai line eka 2023 january ta project start kiyala news dakka! Speed 120 km/h agiwa gaman inna 🚄",
+        "normalized_claim": "The Maho-Omanthai railway line renovation project commenced in January 2023."
+      },
+      {
+        "raw_post": "Mchn 130km railway line eka 91.3 million contract eka sign kara! IRCON international tama! 36 months ta complete kiyala kiwwa! 👍",
+        "normalized_claim": "A 130 km railway modernization project with a contract value of USD 91.3 million was signed with IRCON International."
+      },
+      {
+        "raw_post": "Eka Medawachchiya station ta ceremony kiyala dakka! 59km Kelani Valley line ekak separate project! finally infrastructure development karanawa! 🎉",
+        "normalized_claim": "Railway renovation ceremonies were held at Medawachchiya and Homagama stations in 2023."
+      },
+      {
+        "raw_post": "Railway ta speed increase kara 60 km/h gata 120 km/h gaman agiwa gaman inna kiyala kiwwa! Eka true nada enna? sarili mama railed na! 😊",
+        "normalized_claim": "The Maho-Omanthai railway line speed was planned to increase from 60 km/h to 120 km/h."
+      },
+      {
+        "raw_post": "Government eka Asian Development Bank loan eka gana railway modernization kara gana! Eka investment nada enna? Ape transport eka better agiwa gaman inna! 👍",
+        "normalized_claim": "The railway modernization project was funded through Asian Development Bank loans and government allocation."
+      }
+    ]
+  },
+  {
+    "claim_id": "INFRA_002",
+    "domain": "Infrastructure",
+    "core_claim": "Colombo Central Bus Station renovation deviated from original design - FALSE",
+    "variations": [
+      {
+        "raw_post": "Bus station eka new design eka gatta gana! Pero original plan eka salli nada kiyala news dakka! 😤 Meka political project nada enna?",
+        "normalized_claim": "Claims that the Colombo Central Bus Station renovation deviated from original design circulated online."
+      },
+      {
+        "raw_post": "Mchn viral images ta dakka pero eka false kiyala fact check karala! Original design ekak sama nada follow kara kiyapala! 👍 Meka sarili propaganda",
+        "normalized_claim": "Fact-checkers verified that the bus station renovation followed the original approved design plans."
+      },
+      {
+        "raw_post": "Project ta check karla actual eka design eka sama nada follow kara gana! Eka misinformation post nada enna! 🤦 Sarili opposition posts puluwanda kara",
+        "normalized_claim": "Verification confirmed the Colombo Central Bus Station renovation adhered to the original design specifications."
+      },
+      {
+        "raw_post": "Viral images eka misleading kiyala dakka! 📸 Design change nada kiyapala government! Eka photo manipulation lang nada enna!",
+        "normalized_claim": "The viral images claiming design deviation were identified as misleading or manipulated."
+      },
+      {
+        "raw_post": "Bus station project eka transparent kiyalak kara gana! Original blueprint eka follow kara kiyala project manager kiyapala! 👍 Eka true project nada",
+        "normalized_claim": "Government officials confirmed the bus station project strictly followed the original architectural blueprint."
+      }
+    ]
+  },
+  {
+    "claim_id": "ECO_006",
+    "domain": "Economy",
+    "core_claim": "Mitsubishi Motors was leaving Sri Lanka - FALSE",
+    "variations": [
+      {
+        "raw_post": "Mitsubishi Motors eka hadala gana kiyala news dakka! 😱 Vehicle industry eka collapse karana ayith! Pero eka false kiyala fact check dakka 🤦",
+        "normalized_claim": "Claims that Mitsubishi Motors was leaving Sri Lanka circulated on social media."
+      },
+      {
+        "raw_post": "Mchn 2023 ta eka unfounded claims kiyala Fact Crescendo kiyapala! Company eka actual eka operating kara gana! 👍 Meka misinformation campaign",
+        "normalized_claim": "Fact Crescendo debunked claims of Mitsubishi Motors' departure as unfounded misinformation."
+      },
+      {
+        "raw_post": "Apparel manufacturers sab eka hadala gana kiyak news walanda pero eka false kiyala dakka! 😒 Major companies eka still operate kara gana!",
+        "normalized_claim": "False rumors about major corporate departures were dispelled by fact-checkers."
+      },
+      {
+        "raw_post": "Vehicle market ta loku problem inna pero Mitsubishi eka specific eka nada leave kara gana! 🚗 Misinformation puluwanda kara gattata",
+        "normalized_claim": "While the vehicle market faced challenges, Mitsubishi Motors did not leave Sri Lanka."
+      },
+      {
+        "raw_post": "Eka political campaign kiyalak sarili news factory ta gana loku false claims! 😤 Verified kiyala dakka Mitsubishi eka still inna! 👍",
+        "normalized_claim": "Verified: Mitsubishi Motors continued operations in Sri Lanka despite rumors of departure."
+      }
+    ]
+  },
+  {
+    "claim_id": "HEALTH_001",
+    "domain": "Health",
+    "core_claim": "Plastic eggs were being imported from China - FALSE",
+    "variations": [
+      {
+        "raw_post": "Plastic eggs eka India gata gana kiyala video dakka! 😱 Meka fake eggs para! Aber kela nada karala? Consumer authority eka check kara!",
+        "normalized_claim": "Videos claiming plastic eggs were being imported circulated widely on social media."
+      },
+      {
+        "raw_post": "Mchn video eka reverse image karala dakka - eka toy eggs manufacturing video nada! 😒 Not real eggs! Eka completely false claim kiyala consumer authority kiyapala! 👍",
+        "normalized_claim": "The plastic egg video was identified as footage of toy egg manufacturing, not real eggs."
+      },
+      {
+        "raw_post": "2018 ta FSSAI report ekak check karala - plastic eggs eka impossible kiyala dakka! Meka myth lang nada enna! 🤦 Ape sirisara fake news puluwanda kara",
+        "normalized_claim": "Food safety authorities confirmed that plastic eggs cannot be produced or sold as food products."
+      },
+      {
+        "raw_post": "Egg shortage ta gata false news walanda! 😤 Actual eka India gat eggs eka good quality! Eka fake video karala ape manasikata karamu kiyapala",
+        "normalized_claim": "Despite egg shortages, claims of plastic eggs were debunked; imported eggs met safety standards."
+      },
+      {
+        "raw_post": "Consumer Affairs Authority kiyapala - plastic egg complaints nada! 👍 Eka fake video + fake claim = fake news! Ape health eka safe nada! 😊",
+        "normalized_claim": "Consumer Affairs Authority reported no complaints of plastic eggs; plastic egg production claims were false."
+      }
+    ]
+  },
+  {
+    "claim_id": "HEALTH_002",
+    "domain": "Health",
+    "core_claim": "Chemical fertilizer ban resulted in severe agricultural losses",
+    "variations": [
+      {
+        "raw_post": "2021 ta government eka organic farming kiyala ban kara! 😤 Rice yield eka 40% gatta! Eka disaster kiyalak mama karawa! Farmers eka bankrupt kara dana",
+        "normalized_claim": "The 2021 chemical fertilizer ban resulted in significant agricultural losses and yield reductions."
+      },
+      {
+        "raw_post": "Mchn organic fertilizer eka supply nada! Eka feasibility study ekak karala - nitrogen content eka low kiyala dakka! Ban kara gana mistake nada enna!",
+        "normalized_claim": "Studies showed that available organic fertilizers could not provide sufficient nitrogen for crop production."
+      },
+      {
+        "raw_post": "Agriculture sector eka collapse kara dan! Tea, rice sab eka production kata gana! November 2021 ta lift kara pero hinda gana nada damage! 💔",
+        "normalized_claim": "The fertilizer ban severely damaged tea and rice production; the ban was lifted after only six months."
+      },
+      {
+        "raw_post": "Food insecurity ekak create kara government eka sudden ban! 😡 Farmers eka lose kara gana lakhs! Eka political decision nada economic nada",
+        "normalized_claim": "The abrupt fertilizer ban created food insecurity and caused farmers significant financial losses."
+      },
+      {
+        "raw_post": "Organic farming eka gradual transition eka kara labala pero sudden ban kiyala eka disaster! 👍 Eka true policy failure kiyalak economists kiyapala",
+        "normalized_claim": "Experts confirmed the sudden fertilizer ban was a policy failure that required abrupt lifting in 2021."
+      }
+    ]
+  },
+  {
+    "claim_id": "ENERGY_001",
+    "domain": "Energy",
+    "core_claim": "CEB disconnected 1,063,566 customers in 2023",
+    "variations": [
+      {
+        "raw_post": "Over 1 million ta electricity disconnect kara 2023 ta! 😭 Mathata 10x increase from 2022! Power kota basic need nada enna?",
+        "normalized_claim": "The Ceylon Electricity Board disconnected over 1 million customers in 2023 due to unpaid bills."
+      },
+      {
+        "raw_post": "Mchn 247,250 customers ta 2022 ta disconnect kara pero 2023 ta 1 million plus! 😤 Eka fourfold increase! Wage nada but tariff eka 10x gatta!",
+        "normalized_claim": "Disconnections increased more than fourfold from 2022 to 2023 despite wage stagnation."
+      },
+      {
+        "raw_post": "Power bill eka loku gana - mathata pay karamu sakota nada! 💔 Government eka IMF target kiyalak ape sirisara suffer karanawa!",
+        "normalized_claim": "High electricity tariffs and government austerity measures led to widespread customer disconnections."
+      },
+      {
+        "raw_post": "250,000 factories ta close kara 2023 ta! Electricity bill eka main reason kiyala news dakka! Eka economic collapse nada enna!",
+        "normalized_claim": "Factory closures in 2023 were partly attributed to high electricity bills and disconnections."
+      },
+      {
+        "raw_post": "CEB eka 1.06 million families ta basic need kita gana! 😞 Meka human rights issue nada enna? IMF program eka sarili sirisara suffer karanawa",
+        "normalized_claim": "Over 1 million customer disconnections in 2023 raised concerns about access to essential services."
+      }
+    ]
+  },
+  {
+    "claim_id": "ENERGY_002",
+    "domain": "Energy",
+    "core_claim": "Electricity tariff reductions of 21.9% occurred in March 2024",
+    "variations": [
+      {
+        "raw_post": "Finally! March 4 ta electricity tariff eka 21.9% reduce kara gana! 🎉 Ape bill eka bit less gaman inna! Thank god!",
+        "normalized_claim": "Electricity tariffs were reduced by an average of 21.9% on March 4, 2024."
+      },
+      {
+        "raw_post": "Mchn July ta another 22.5% reduction kara gana! 😊 Tariff cut eka two times! Eke budget nada gana relief! 👍",
+        "normalized_claim": "A further 22.5% tariff reduction was implemented on July 16, 2024, following the March reduction."
+      },
+      {
+        "raw_post": "Inflation negative gana - electricity ta reduce kara! Eka economic recovery eka sign nada enna! 💪",
+        "normalized_claim": "Tariff reductions coincided with negative inflation and economic recovery indicators."
+      },
+      {
+        "raw_post": "Government eka tariff cut eka good move! Mathata consumption ekak increase kara gaman inna! Bill eka pay karamu sakota agiwa gana 😌",
+        "normalized_claim": "Tariff reductions allowed households to increase electricity usage and affordability improved."
+      },
+      {
+        "raw_post": "21.9% + 22.5% = near 40% reduction para! 🤗 Eka family budget ta help kiyala gana! finally ape sirisara breathing space! 👍",
+        "normalized_claim": "Combined tariff reductions of nearly 40% over two periods in 2024 improved household affordability."
+      }
+    ]
+  },
+  {
+    "claim_id": "FIN_001",
+    "domain": "Finance",
+    "core_claim": "IMF Extended Fund Facility program passed multiple reviews",
+    "variations": [
+      {
+        "raw_post": "IMF eka 3 reviews pass kara gana! 🎉 Program eka successful kiyalak mama karawa! Sri Lanka eka economy eka recover kara gana",
+        "normalized_claim": "Sri Lanka's IMF Extended Fund Facility program successfully passed three consecutive reviews."
+      },
+      {
+        "raw_post": "Mchn 2025 ta fourth review ekak pass kara gana! 👍 Fiscal targets eka meet kara kiyapala! USD 350 million eka diyala gana",
+        "normalized_claim": "The fourth IMF review was completed in July 2025, providing USD 350 million in disbursement."
+      },
+      {
+        "raw_post": "Eka program eka 48 months! Sri Lanka eka most complex restructuring case kiyalak IMF kiyapala! Pero ape recovery eka on track! 💪",
+        "normalized_claim": "The IMF noted Sri Lanka's debt restructuring as one of the most complex cases; recovery is on track."
+      },
+      {
+        "raw_post": "Government eka fiscal targets eka mostly meet kara gana kiyala IMF kiyapala! 👍 Eka discipline kiyalak mama karawa!",
+        "normalized_claim": "IMF reported that Sri Lanka met most fiscal and monetary reform targets under the program."
+      },
+      {
+        "raw_post": "USD 3 billion program eka 2023 ta start kara! Primary surplus eka 2.2% of GDP agiwa gana 2024 ta! Eka success story kiyalak mama karawa 😊",
+        "normalized_claim": "The USD 3 billion IMF program (2023-2027) achieved a primary surplus of 2.2% of GDP in 2024."
+      }
+    ]
+  },
+  {
+    "claim_id": "GOV_001",
+    "domain": "Government",
+    "core_claim": "PM Mahinda Rajapaksa resigned on May 9, 2022",
+    "variations": [
+      {
+        "raw_post": "Mahinda eka resign kara! May 9 ta PM post eka leave kara gana! 😤 Protest ta athule final! Government collapse kara dana",
+        "normalized_claim": "Prime Minister Mahinda Rajapaksa resigned on May 9, 2022, during the economic crisis."
+      },
+      {
+        "raw_post": "Mchn Gotabaya eka still president nada pero Mahinda eka resign! Eka political crisis nada enna! Government ta chaos nada",
+        "normalized_claim": "Following Mahinda's resignation, President Gotabaya Rajapaksa appointed Ranil Wickremesinghe as PM."
+      },
+      {
+        "raw_post": "Eka 2022 ta biggest political change! Rajapaksa dynasty eka power lose kara gana! Ape sirisara protest kata government change kara!",
+        "normalized_claim": "Mahinda's resignation marked a significant shift in Sri Lankan politics during the economic crisis."
+      },
+      {
+        "raw_post": "PM kala gana leadership nada kiyalak mama karawa! Mahinda eka resign kara - eka responsibility kiyalak mama karawa 👍",
+        "normalized_claim": "PM Rajapaksa's resignation was attributed to public pressure and government policy failures."
+      },
+      {
+        "raw_post": "Eka historical moment nada enna! Mahinda - Gotabaya dynasty eka hapu gana begin kara! Ranil eka PM agiwa gana",
+        "normalized_claim": "Mahinda Rajapaksa's resignation on May 9, 2022, initiated significant political changes in Sri Lanka."
+      }
+    ]
+  },
+  {
+    "claim_id": "GOV_002",
+    "domain": "Government",
+    "core_claim": "Ranil Wickremesinghe was elected president on July 20, 2022",
+    "variations": [
+      {
+        "raw_post": "Ranil eka elected agiwa gana president kiyala! July 20 ta parliament vote! 😤 Adera eka Wickremesinghe kiyapala but ape sirisara accept nada kara!",
+        "normalized_claim": "Ranil Wickremesinghe was elected president through parliamentary vote on July 20, 2022."
+      },
+      {
+        "raw_post": "Mchn Gotabaya eka resign kara gana kiyala July 14 ta kiwwa! Ranil eka parliament ta vote kara elect kiyapala! 👍",
+        "normalized_claim": "Gotabaya Rajapaksa resigned on July 14, 2022; Ranil was elected president six days later."
+      },
+      {
+        "raw_post": "Eka interim president eka gana - Gotabaya eka kiyapala! Ranil eka permanent president kiyala parliament vote kara gana!",
+        "normalized_claim": "Ranil's election as president on July 20 marked the formal transfer of executive power."
+      },
+      {
+        "raw_post": "Government eka change kara gana! Eka political instability time nada! Pero ape sirisara march karata continue kara gana",
+        "normalized_claim": "Ranil's presidency began amid continued economic crisis and public protest."
+      },
+      {
+        "raw_post": "Presidential election ta IMF reform kiyalak mama karawa! Ranil eka economic policies kiyalak sarili manasikata gatta change kiyapala",
+        "normalized_claim": "Ranil Wickremesinghe's administration pursued IMF-mandated economic reforms and restructuring."
+      }
+    ]
+  },
+  {
+    "claim_id": "ECO_007",
+    "domain": "Economy",
+    "core_claim": "Sri Lanka's GDP grew by 5% in 2024",
+    "variations": [
+      {
+        "raw_post": "2024 ta GDP eka 5% grow kara gana! 🎉 Final year ta eka good recovery! Ape economy eka road ta back gana",
+        "normalized_claim": "Sri Lanka's GDP grew by 5% in 2024, indicating economic recovery."
+      },
+      {
+        "raw_post": "Mchn Q3 ta 5.4% year-on-year growth kiyala news dakka! Construction, tourism eka strong nada! 👍",
+        "normalized_claim": "Q3 2024 showed 5.4% growth driven by tourism and construction sectors."
+      },
+      {
+        "raw_post": "Recovery eka broad-based kiyala kiwwa! Tourism, services, agriculture sab eka contribute kara gana! 😊",
+        "normalized_claim": "Economic growth in 2024 was broad-based across multiple sectors including tourism and services."
+      },
+      {
+        "raw_post": "2021-2023 ta contraction gana pero 2024 ta rebound kara! Eka 9.5% cumulative loss ekak partial recover kara gana",
+        "normalized_claim": "After contracting 9.5% cumulatively from 2021-2023, the economy rebounded with 5% growth in 2024."
+      },
+      {
+        "raw_post": "5% growth eka good pero still poverty eka 10% increase kara gana 2021-2022 ta. Income levels ekak recover kara labala inna 💔",
+        "normalized_claim": "Despite 5% GDP growth in 2024, poverty levels remained elevated from 2021-2022 increases."
+      }
+    ]
+  },
+  {
+    "claim_id": "ECO_008",
+    "domain": "Economy",
+    "core_claim": "External debt restructuring near completion by 2024",
+    "variations": [
+      {
+        "raw_post": "Debt restructuring ekak finally near complete! 98% Eurobonds exchange kara gana kiyala news dakka! 👍 Eka major achievement nada enna!",
+        "normalized_claim": "Nearly 98% of Sri Lanka's Eurobonds were exchanged as part of the debt restructuring process."
+      },
+      {
+        "raw_post": "Mchn bilateral creditors - China, India, Japan sab eka agree kara gana! Eka most complex restructuring kiyalak IMF kiyapala!",
+        "normalized_claim": "Official creditors including China, India, and Japan agreed to debt restructuring terms by 2024."
+      },
+      {
+        "raw_post": "$51 billion foreign debt eka restructure kara gana! Eka major relief! 2027 ta $28 billion repay kara labala inna",
+        "normalized_claim": "Sri Lanka restructured $51 billion in foreign debt; $28 billion is due for repayment by 2027."
+      },
+      {
+        "raw_post": "Nearly 2 years ta negotiations! But eka worth kiyala mama karawa! Ape payment pressure ekak reduce kara gana",
+        "normalized_claim": "After nearly two years of negotiations, debt restructuring was substantially completed by late 2024."
+      },
+      {
+        "raw_post": "December 2024 ta Caribbean Development Bank liabilities restructure kara gana! 👍 Eke all large debt nada settle kara gana!",
+        "normalized_claim": "By December 2024, all major commercial and bilateral debts had been successfully restructured."
+      }
+    ]
+  },
+  {
+    "claim_id": "ELEC_003",
+    "domain": "Elections",
+    "core_claim": "National People's Power secured parliamentary majority in 2024",
+    "variations": [
+      {
+        "raw_post": "2024 parliament election ta NPP eka landslide! 🎉 First time history ta single party eka eka majority! Anura Kumara eka strong mandate kara gana!",
+        "normalized_claim": "The National People's Power party won a parliamentary majority in the 2024 elections."
+      },
+      {
+        "raw_post": "Mchn Rajapaksa dynasty eka finally gone! 30 years ta power gana party eka out kara gana! 😤 Eka political revolution kiyalak mama karawa",
+        "normalized_claim": "The 2024 elections ended the Rajapaksa family's three-decade dominance in Sri Lankan politics."
+      },
+      {
+        "raw_post": "NPP eka mandate eka strong! Clean governance kiyalak campaign kara gana! Eka people's choice nada enna!",
+        "normalized_claim": "Voters supported NPP's campaign platform focused on clean governance and anti-corruption measures."
+      },
+      {
+        "raw_post": "September ta presidential election, October ta parliamentary! 👍 Eka back-to-back NPP victories! Change kiyalak people kara gana",
+        "normalized_claim": "The NPP won both the September 2024 presidential election and subsequent parliamentary elections."
+      },
+      {
+        "raw_post": "Eka left-wing coalition nada! NPP eka non-traditional political force kiyalak mama karawa! Ape politics ta new chapter start kara",
+        "normalized_claim": "The NPP's victory represented a shift from traditional political parties to non-traditional coalition leadership."
+      }
+    ]
+  },
+  {
+    "claim_id": "GOV_003",
+    "domain": "Government",
+    "core_claim": "Gotabaya Rajapaksa resigned on July 14, 2022",
+    "variations": [
+      {
+        "raw_post": "Gotabaya eka finally resign! July 14 ta 🎉 Eke email tar resign kara gana! Singapore ta gana kiyala news dakka! 😤",
+        "normalized_claim": "President Gotabaya Rajapaksa resigned on July 14, 2022, initially from Singapore via email."
+      },
+      {
+        "raw_post": "Mchn July 13 ta Singapore ta flee kara! Kiyapala resign kara nada kiyalak protest wala gana! Eke July 14 ta official resign",
+        "normalized_claim": "Gotabaya fled to Singapore on July 13 and formally resigned on July 14, 2022."
+      },
+      {
+        "raw_post": "Protest ta pressure! Eke 6 lakh family ta gale face gana - president eka gana labala tiyela! Adera resign kiyapala",
+        "normalized_claim": "Mass protests and public pressure led to President Gotabaya's decision to resign."
+      },
+      {
+        "raw_post": "Eka historic moment! 2022 ta political crisis ekak final! 💔 But economy eka recover kara labala inna",
+        "normalized_claim": "Gotabaya's resignation in July 2022 marked the end of the political crisis phase of the economic emergency."
+      },
+      {
+        "raw_post": "Galle Face ta historic protest! President ekak force resign kiyala gana! Eka people power kiyalak mama karawa 👍",
+        "normalized_claim": "President Gotabaya's resignation followed the historic Galle Face Green protests in 2022."
+      }
+    ]
+  }
+]
