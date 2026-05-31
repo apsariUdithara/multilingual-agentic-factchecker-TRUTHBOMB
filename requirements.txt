@@ -1,0 +1,11 @@
+langgraph
+langchain
+langchain-community
+langchain-huggingface
+chromadb
+sentence-transformers
+pypdf
+google-generativeai
+streamlit
+duckduckgo-search
+python-dotenv
