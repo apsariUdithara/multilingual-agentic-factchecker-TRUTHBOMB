@@ -9,3 +9,5 @@ TAVILY_API_KEY = os.getenv("TAVILY_API_KEY")
 # Local Model Configuration
 TRAFFIC_MODEL_PATH = "pipeline-setup/models/phi3-traffic-lora"
 VECTOR_DB_DIR = "pipeline-setup/vector_db"
+EMBEDDING_MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
+CHROMA_COLLECTION_NAME = "traffic_laws" # Adjust if the actual name differs
