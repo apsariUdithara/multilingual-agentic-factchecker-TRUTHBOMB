@@ -7,3 +7,11 @@ chromadb
 rank_bm25
 pytest
 python-dotenv
+fastapi
+uvicorn
+streamlit
+requests
+llama-cpp-python
+langchain-community
+langchain-huggingface
+sentence-transformers

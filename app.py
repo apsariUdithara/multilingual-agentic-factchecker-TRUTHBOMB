@@ -1,99 +1,117 @@
+import requests
 import streamlit as st
-import json
-import os
-from src.pipeline import run_fact_checker
-from PIL import Image
 
-# Page Configuration
+API_URL = "http://127.0.0.1:8000/api/v1/verify"
+
 st.set_page_config(
-    page_title="Sri Lankan Social Media Fact-Checking Hub",
-    page_icon="🔍",
-    layout="centered"
+    page_title="Traffic Telemetry Fact-Checker",
+    page_icon="TT",
+    layout="wide",
 )
 
-st.title("🔍 Sri Lankan Social Media Fact-Checking Hub")
-st.markdown("""
-Verify claims from Facebook, X (Twitter), WhatsApp, and more. 
-Our system uses **Gemini 1.5 Flash** for general news and a **Fine-tuned Phi-3.5** for Sri Lankan Traffic Laws.
-""")
+st.markdown(
+    """
+    <style>
+        .stApp {
+            background: radial-gradient(circle at 15% 15%, #eef4ff 0%, #f7fafc 45%, #edf6f1 100%);
+        }
+        .result-card {
+            border: 1px solid #d7dde5;
+            border-radius: 12px;
+            padding: 16px;
+            background: #ffffff;
+        }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
 
-# Input Section
-st.subheader("Submit a Claim")
-input_type = st.radio("Choose input type:", ["Text", "Image/Screenshot"])
+st.title("Traffic Telemetry Fact-Checker")
+st.caption("Paste a Singlish or English social media claim and verify it against retrieved context.")
 
-user_input = None
-if input_type == "Text":
-    user_input = st.text_area("Paste the social media post content here:", placeholder="e.g., Aluth traffic fines announced today...")
-else:
-    uploaded_file = st.file_uploader("Upload a screenshot of the post:", type=["png", "jpg", "jpeg"])
-    if uploaded_file is not None:
-        # Save temporary file for the pipeline
-        temp_dir = "temp_uploads"
-        if not os.path.exists(temp_dir):
-            os.makedirs(temp_dir)
-        temp_path = os.path.join(temp_dir, uploaded_file.name)
-        with open(temp_path, "wb") as f:
-            f.write(uploaded_file.getbuffer())
-        user_input = temp_path
-        st.image(Image.open(uploaded_file), caption="Uploaded Screenshot", use_container_width=True)
+user_input = st.text_area(
+    "Social media post",
+    placeholder="e.g., Nawammahara railway gate close wela traffic jam ekak thiyenawa",
+    height=180,
+)
 
-# Verification Logic
-if st.button("Verify Claim", type="primary"):
-    if not user_input:
-        st.warning("Please provide some input first!")
+verify_clicked = st.button("Verify", type="primary", use_container_width=True)
+
+if verify_clicked:
+    if not user_input.strip():
+        st.warning("Please enter a post before verification.")
     else:
         try:
-            with st.status("Fact-checking in progress...") as status:
-                st.write("🤖 Triage Agent: Analyzing input and detecting language...")
-                # Note: For real-time updates from LangGraph, we'd use streaming, 
-                # but for this MVP we'll use step-by-step messaging in the status box.
-                
-                # Execute Pipeline
-                result = run_fact_checker(user_input)
-                
-                status.update(label="Fact-check Complete!", state="complete", expanded=False)
+            with st.spinner("Verifying claim..."):
+                response = requests.post(
+                    API_URL,
+                    json={"text": user_input},
+                    timeout=90,
+                )
 
-            # Extract Data
-            final_verdict = result.get("final_verdict", {})
-            verdict = final_verdict.get("verdict", "Unverified")
-            confidence = final_verdict.get("confidence_score", "0%")
-            rationale = final_verdict.get("rationale", "No rationale provided.")
-            summaries = final_verdict.get("summaries", {})
-            
-            # Display Results
-            st.divider()
-            st.header("Verification Result")
-            
-            # Metrics
-            col1, col2 = st.columns(2)
-            with col1:
-                # Color coding for verdict
-                color = "green" if verdict == "True" else "red" if verdict == "False" else "orange"
-                st.markdown(f"### Verdict: :{color}[{verdict}]")
-            with col2:
-                st.metric("Confidence Score", confidence)
+            if response.status_code != 200:
+                detail = "Unknown server error"
+                try:
+                    detail = response.json().get("detail", detail)
+                except ValueError:
+                    detail = response.text or detail
+                st.error(f"Verification failed ({response.status_code}): {detail}")
+            else:
+                data = response.json()
+                verdict = str(data.get("verdict", "UNVERIFIED")).upper()
 
-            # Rationale
-            st.subheader("Rationale")
-            st.write(rationale)
+                if verdict == "TRUE":
+                    verdict_color = "#18794e"
+                elif verdict == "FALSE":
+                    verdict_color = "#b42318"
+                else:
+                    verdict_color = "#667085"
 
-            # Multilingual Summaries
-            st.subheader("Summaries")
-            tab1, tab2, tab3 = st.tabs(["English", "සිංහල", "தமிழ்"])
-            
-            with tab1:
-                st.write(summaries.get("english", "N/A"))
-            with tab2:
-                st.write(summaries.get("sinhala", "N/A"))
-            with tab3:
-                st.write(summaries.get("tamil", "N/A"))
+                confidence = data.get("confidence_score", 0.0)
+                try:
+                    confidence_pct = f"{float(confidence) * 100:.1f}%"
+                except (TypeError, ValueError):
+                    confidence_pct = "N/A"
 
-            # Source Info
-            with st.expander("Technical Evidence Details"):
-                st.json(result.get("agent_outputs", []))
+                st.markdown("<div class='result-card'>", unsafe_allow_html=True)
+                st.subheader("Verification Result")
+                st.write("**Extracted claim (English)**")
+                st.write(data.get("extracted_claim_en", "N/A"))
 
-        except Exception as e:
-            st.error(f"An error occurred during verification: {e}")
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.markdown(
+                        f"<h3 style='color:{verdict_color}; margin-bottom:0;'>Verdict: {verdict}</h3>",
+                        unsafe_allow_html=True,
+                    )
+                with col2:
+                    st.metric("Confidence", confidence_pct)
 
-st.divider()
-st.caption("Disclaimer: This tool provides AI-generated fact-checking based on available data. Always consult official gazettes for legal matters.")
+                st.write("**Reasoning**")
+                st.write(data.get("reasoning", "No reasoning provided."))
+                st.markdown("</div>", unsafe_allow_html=True)
+
+                with st.expander("Retrieved Context Sources"):
+                    context_rows = data.get("retrieved_context", [])
+                    if not context_rows:
+                        st.info("No context documents were returned.")
+                    else:
+                        for idx, row in enumerate(context_rows, start=1):
+                            st.markdown(f"**Source {idx}**")
+                            st.write(f"Source: {row.get('source', 'Unknown')}")
+                            st.write(f"Timestamp: {row.get('timestamp', 'N/A')}")
+                            st.write(f"Distance Score: {row.get('distance_score', 'N/A')}")
+                            st.write(row.get("content", ""))
+                            st.divider()
+
+        except requests.exceptions.ConnectionError:
+            st.error(
+                "Cannot connect to FastAPI server at http://127.0.0.1:8000. "
+                "Please start the backend and try again."
+            )
+        except requests.exceptions.Timeout:
+            st.error("The verification request timed out. Please retry.")
+        except requests.RequestException as exc:
+            st.error(f"Network error during verification: {exc}")
+        except ValueError:
+            st.error("Received an invalid JSON response from the server.")
