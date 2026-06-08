@@ -1,0 +1,34 @@
+version: '3.8'
+
+services:
+  api:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./models:/app/models
+      - ./chroma_db:/app/chroma_db
+      - ./scripts:/app/scripts
+      - ./data:/app/data
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    command: uvicorn src.main:app --host 0.0.0.0 --port 8000
+
+  streamlit:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: streamlit run app.py
+    ports:
+      - "8501:8501"
+    environment:
+      - API_URL=http://api:8000/api/v1/verify
+    depends_on:
+      - api
