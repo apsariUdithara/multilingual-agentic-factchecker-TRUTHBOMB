@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.env
+
+# Project Specific
+models/
+chroma_db/
+unsloth_compiled_cache/
+scripts/rag_updater_session*
+*.session
+
+# Documentation (As requested)
+COMPONENTS_OVERVIEW.md
+PROJECT_REPORT.md
+
+# OS specific
+.DS_Store
+Thumbs.db
