@@ -4,13 +4,31 @@ __pycache__/
 *$py.class
 venv/
 .env
+.env.local
 
-# Project Specific
+# ML Models & Large Files
 models/
-chroma_db/
+*.gguf
+*.bin
+*.pt
+*.pth
+*.safetensors
 unsloth_compiled_cache/
+
+# Databases
+chroma_db/
+pipeline-setup/vector_db/
+*.sqlite3
+
+# Sessions & Logs
 scripts/rag_updater_session*
 *.session
+*.log
+.pytest_cache/
+
+# Frontend builds
+frontend/dist/
+frontend/node_modules/
 
 # Documentation (As requested)
 COMPONENTS_OVERVIEW.md
@@ -19,3 +37,7 @@ PROJECT_REPORT.md
 # OS specific
 .DS_Store
 Thumbs.db
+desktop.ini
+
+
+.md
