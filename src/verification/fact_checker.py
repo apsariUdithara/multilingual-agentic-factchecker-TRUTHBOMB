@@ -4,7 +4,7 @@ from typing import List, Dict, Any
 from langchain_community.vectorstores import Chroma
 from langchain_huggingface import HuggingFaceEmbeddings
 from llama_cpp import Llama
-from src.config import VECTOR_DB_DIR, EMBEDDING_MODEL_NAME, CHROMA_COLLECTION_NAME
+from src.config import GGUF_MODEL_PATH, VECTOR_DB_DIR, EMBEDDING_MODEL_NAME, CHROMA_COLLECTION_NAME
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -12,8 +12,8 @@ logger = logging.getLogger(__name__)
 
 class FactChecker:
     def __init__(
-        self, 
-        model_path: str = "models/phi3-extractor-unsloth.Q4_K_M.gguf",
+        self,
+        model_path: str = GGUF_MODEL_PATH,
         vector_db_dir: str = VECTOR_DB_DIR,
         embedding_model: str = EMBEDDING_MODEL_NAME,
         collection_name: str = CHROMA_COLLECTION_NAME

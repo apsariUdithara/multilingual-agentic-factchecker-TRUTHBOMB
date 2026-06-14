@@ -555,9 +555,10 @@
 
 import os
 from llama_cpp import Llama
+from src.config import GGUF_MODEL_PATH
 
 class LinguisticExtractor:
-    def __init__(self, model_path="models/phi3-extractor-unsloth.Q4_K_M.gguf"):
+    def __init__(self, model_path=GGUF_MODEL_PATH):
         print("Initializing LinguisticExtractor via llama.cpp (GPU Accelerated)...")
         
         if not os.path.exists(model_path):
