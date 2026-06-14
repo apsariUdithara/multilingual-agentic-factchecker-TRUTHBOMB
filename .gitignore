@@ -30,14 +30,8 @@ scripts/rag_updater_session*
 frontend/dist/
 frontend/node_modules/
 
-# Documentation (As requested)
-COMPONENTS_OVERVIEW.md
-PROJECT_REPORT.md
 
 # OS specific
 .DS_Store
 Thumbs.db
 desktop.ini
-
-
-.md
