@@ -6,6 +6,9 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 from peft import PeftModel
 from src.config import TRAFFIC_MODEL_PATH, VECTOR_DB_DIR, EMBEDDING_MODEL_NAME, CHROMA_COLLECTION_NAME
 
+# Note: We reuse the TRAFFIC_MODEL_PATH but logically it represents the fine-tuned extraction/reasoning model.
+# In a fully generalized system, you would rename this config variable to reasoning_model_path.
+
 # Global variables for lazy loading
 _embeddings = None
 _vector_db = None
@@ -42,16 +45,16 @@ def get_model_and_tokenizer():
             device_map="auto"
         )
         
-        # Load LoRA adapters
+        # Load adapters (PEFT)
         _model = PeftModel.from_pretrained(base_model, TRAFFIC_MODEL_PATH)
         _model.eval()
     return _model, _tokenizer
 
 @tool
-def verify_traffic_law_claim(claim: str) -> str:
+def verify_claim_against_local_db(claim: str) -> str:
     """
-    Verifies a traffic law claim using the local Sri Lankan Motor Traffic Act database 
-    and a fine-tuned Phi-3.5 model.
+    Verifies a social media claim using the local OSINT database 
+    and a fine-tuned reasoning model.
     """
     db = get_vector_db()
     docs = db.similarity_search(claim, k=3)
@@ -60,7 +63,8 @@ def verify_traffic_law_claim(claim: str) -> str:
     model, tokenizer = get_model_and_tokenizer()
     
     prompt = f"""<|system|>
-You are a Sri Lankan Traffic Law Expert. Use the following context to verify the claim.
+You are an expert fact-checker specialized in Sri Lankan social media claims. 
+Use the following context from official news reports and social media archives to verify the claim.
 Context:
 {context}
 <|user|>
@@ -73,7 +77,6 @@ Claim: {claim}
         outputs = model.generate(**inputs, max_new_tokens=512)
     
     response = tokenizer.decode(outputs[0], skip_special_tokens=True)
-    # Extract only the assistant's part
     if "<|assistant|>" in response:
         response = response.split("<|assistant|>")[-1].strip()
         
