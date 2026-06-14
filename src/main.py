@@ -15,30 +15,23 @@ from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.retrievers import BM25Retriever
 from langchain_core.documents import Document
 from src.models.extractor import LinguisticExtractor
+from src.config import VECTOR_DB_DIR, EMBEDDING_MODEL_NAME, CHROMA_COLLECTION_NAME, TARGET_CHANNELS
 
 try:
     from llama_cpp import LlamaGrammar
 except ImportError:
     LlamaGrammar = None
 
-# =====================================================================
-# SYSTEM INITIALIZATION & CONFIGURATION
-# =====================================================================
-VECTOR_DB_DIR = "D:/7th/AI/Project/chroma_db"
-EMBEDDING_MODEL_NAME = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
-CHROMA_COLLECTION_NAME = "traffic_telemetry"
-
 # --- TELEGRAM CREDENTIALS ---
 API_ID = 38020229
 API_HASH = 'bad58fa93d224c8320db9639efa7ed5e'
 SESSION_NAME = os.path.join("D:/7th/AI/Project/scripts", 'rag_updater_session')
-TARGET_CHANNELS = ['AdaDeranaNews']
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)
 
 app = FastAPI(
-    title="Cyber-Physical Traffic Telemetry Fact-Checking Engine",
+    title="Social Media Claim Fact-Checking Engine",
     description="Automated system to extract claims from mixed linguistic streams and verify them against live OSINT databases.",
     version="1.0.0"
 )
@@ -99,7 +92,7 @@ async def telegram_ingestion_worker():
                     existing_ids.add(msg_id)
             
             if new_documents:
-                logger.info(f"Injecting {len(new_documents)} new Telegram alerts into ChromaDB...")
+                logger.info(f"Injecting {len(new_documents)} new social media alerts into ChromaDB...")
                 vector_db.add_documents(new_documents)
                 update_bm25_retriever()
         except Exception as e:

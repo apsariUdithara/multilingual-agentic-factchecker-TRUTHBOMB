@@ -1,50 +1,51 @@
 import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 from src.pipeline import run_fact_checker
 
-# Mocking the heavy/external dependencies to allow tests to run in any environment
-@patch("src.agents.triage.model.generate_content")
-@patch("src.agents.traffic_expert.verify_traffic_law_claim")
-@patch("src.agents.web_researcher.web_search")
-@patch("src.agents.synthesis.model.generate_content")
-def test_traffic_claim_routing(mock_synthesis, mock_web_search, mock_traffic_tool, mock_triage):
-    """
-    Verifies that a traffic-related claim routes to the traffic_expert.
-    """
-    # 1. Setup Mocks
-    mock_triage.return_value.text = '{"language": "English", "extracted_claim": "A 16-year-old can register a car.", "routing_destination": "traffic_expert"}'
-    mock_traffic_tool.invoke.return_value = "According to the Motor Traffic Act, the minimum age is 18."
-    mock_synthesis.return_value.text = '{"verdict": "False", "confidence_score": "95%", "rationale": "Legal age is 18.", "summaries": {"english": "False.", "sinhala": "අසත්‍යයි.", "tamil": "பொய்."}}'
-    
-    claim = "A 16-year-old can register a car in Sri Lanka."
-    result = run_fact_checker(claim)
-    
-    # 2. Assert Routing and Logic
-    assert result["routing_destination"] == "traffic_expert"
-    assert any(out["agent"] == "traffic_expert" for out in result["agent_outputs"])
-    assert result["final_verdict"]["verdict"] == "False"
-    assert result["final_verdict"]["summaries"]["sinhala"] == "අසත්‍යයි."
+@pytest.fixture
+def mock_agents():
+    with patch("src.agents.claim_extractor.model.generate_content") as mock_extractor, \
+         patch("src.agents.local_researcher.verify_claim_against_local_db.invoke") as mock_local, \
+         patch("src.agents.web_researcher.web_search.invoke") as mock_web, \
+         patch("src.agents.synthesis.model.generate_content") as mock_synth:
+        
+        # Mock Extractor
+        mock_extractor_response = MagicMock()
+        mock_extractor_response.text = '{"language": "English", "extracted_claim": "The sky is blue", "routing_destination": "web_researcher"}'
+        mock_extractor.return_value = mock_extractor_response
+        
+        # Mock Web Search
+        mock_web.return_value = "Search results: The sky is confirmed to be blue."
+        
+        # Mock Synthesis
+        mock_synth_response = MagicMock()
+        mock_synth_response.text = '{"verdict": "True", "confidence_score": "100%", "rationale": "Clear evidence.", "summaries": {"english": "True", "sinhala": "සත්‍යයි", "tamil": "உண்மை"}}'
+        mock_synth.return_value = mock_synth_response
+        
+        yield {
+            "extractor": mock_extractor,
+            "local": mock_local,
+            "web": mock_web,
+            "synth": mock_synth
+        }
 
-@patch("src.agents.triage.model.generate_content")
-@patch("src.agents.traffic_expert.verify_traffic_law_claim")
-@patch("src.agents.web_researcher.web_search")
-@patch("src.agents.synthesis.model.generate_content")
-def test_general_claim_routing(mock_synthesis, mock_web_search, mock_traffic_tool, mock_triage):
-    """
-    Verifies that a general news claim routes to the web_researcher.
-    """
-    # 1. Setup Mocks
-    mock_triage.return_value.text = '{"language": "English", "extracted_claim": "New 10000 note.", "routing_destination": "web_researcher"}'
-    mock_web_search.invoke.return_value = "CBSL denied rumors of a new 10,000 rupee note."
-    mock_synthesis.return_value.text = '{"verdict": "False", "confidence_score": "90%", "rationale": "CBSL denied it.", "summaries": {"english": "False.", "sinhala": "අසත්‍යයි.", "tamil": "பொய்."}}'
+def test_full_pipeline_web_routing(mock_agents):
+    input_text = "I think the sky is blue."
+    result = run_fact_checker(input_text)
     
-    claim = "The Central Bank of Sri Lanka just announced a new 10,000 rupee note today."
-    result = run_fact_checker(claim)
-    
-    # 2. Assert Routing and Logic
+    assert result["extracted_claim"] == "The sky is blue"
     assert result["routing_destination"] == "web_researcher"
-    assert any(out["agent"] == "web_researcher" for out in result["agent_outputs"])
-    assert result["final_verdict"]["verdict"] == "False"
+    assert result["final_verdict"]["verdict"] == "True"
+    mock_agents["web"].assert_called_once()
+    mock_agents["local"].assert_not_called()
 
-if __name__ == "__main__":
-    pytest.main([__file__])
+def test_full_pipeline_local_routing(mock_agents):
+    # Update mock to route locally
+    mock_agents["extractor"].return_value.text = '{"language": "English", "extracted_claim": "Local news", "routing_destination": "local_researcher"}'
+    mock_agents["local"].return_value = "Local evidence found."
+    
+    input_text = "Local news update."
+    result = run_fact_checker(input_text)
+    
+    assert result["routing_destination"] == "local_researcher"
+    mock_agents["local"].assert_called_once()

@@ -6,6 +6,6 @@ class AgentState(TypedDict):
     raw_input: str  # text or image path
     language: str   # English, Sinhala, Tamil, or Singlish
     extracted_claim: str
-    routing_destination: str  # 'traffic_expert' or 'web_researcher'
+    routing_destination: str  # 'local_researcher' or 'web_researcher'
     agent_outputs: List[Dict] # Evidence gathered
     final_verdict: Dict       # { "verdict": str, "explanation": str, "language": str }

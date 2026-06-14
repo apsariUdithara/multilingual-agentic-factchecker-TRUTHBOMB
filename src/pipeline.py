@@ -1,13 +1,13 @@
 from langgraph.graph import StateGraph, END
 from src.state import AgentState
-from src.agents.triage import triage_agent
-from src.agents.traffic_expert import traffic_expert_agent
+from src.agents.claim_extractor import claim_extractor_agent
+from src.agents.local_researcher import local_researcher_agent
 from src.agents.web_researcher import web_researcher_agent
 from src.agents.synthesis import synthesis_agent
 
 def router(state: AgentState):
     """
-    Determines which expert node to route to based on triage output.
+    Determines which expert node to route to based on extractor output.
     """
     return state.get("routing_destination", "web_researcher")
 
@@ -15,26 +15,26 @@ def router(state: AgentState):
 workflow = StateGraph(AgentState)
 
 # Add Nodes
-workflow.add_node("triage", triage_agent)
-workflow.add_node("traffic_expert", traffic_expert_agent)
+workflow.add_node("claim_extractor", claim_extractor_agent)
+workflow.add_node("local_researcher", local_researcher_agent)
 workflow.add_node("web_researcher", web_researcher_agent)
 workflow.add_node("synthesis", synthesis_agent)
 
 # Set Entry Point
-workflow.set_entry_point("triage")
+workflow.set_entry_point("claim_extractor")
 
 # Add Conditional Edges
 workflow.add_conditional_edges(
-    "triage",
+    "claim_extractor",
     router,
     {
-        "traffic_expert": "traffic_expert",
+        "local_researcher": "local_researcher",
         "web_researcher": "web_researcher"
     }
 )
 
 # Add Edges to Synthesis
-workflow.add_edge("traffic_expert", "synthesis")
+workflow.add_edge("local_researcher", "synthesis")
 workflow.add_edge("web_researcher", "synthesis")
 
 # End at Synthesis
