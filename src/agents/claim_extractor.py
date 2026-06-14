@@ -7,19 +7,15 @@ from src.state import AgentState
 genai.configure(api_key=GEMINI_API_KEY)
 model = genai.GenerativeModel('gemini-2.5-flash-lite')
 
-def triage_agent(state: AgentState) -> dict:
+def claim_extractor_agent(state: AgentState) -> dict:
     """
-    Parses the raw input, extracts the claim, identifies the language, 
-    and determines the routing destination.
+    Analyzes the raw input to extract a verifiable claim, identify the language,
+    and determine if it should be researched locally or via web search.
     """
     raw_input = state.get("raw_input", "")
     
-    # Check if raw_input is a path to an image or just text
-    # For now, we assume it's text. If it's an image path, 
-    # we would need to load the image.
-    
     prompt = f"""
-    You are a Triage Specialist for a Sri Lankan Social Media Fact-Checking System.
+    You are a Claim Extraction Specialist for a Sri Lankan Social Media Fact-Checking System.
     Analyze the following input:
     ---
     {raw_input}
@@ -27,10 +23,11 @@ def triage_agent(state: AgentState) -> dict:
     
     Tasks:
     1. Identify the primary language (English, Sinhala, Tamil, or Singlish/Tanglish).
-    2. Extract the singular verifiable core claim. Strip out emotional language, opinions, and insults.
-    3. Categorize the domain.
-       - If the claim relates to Sri Lankan traffic fines, vehicle registrations, road rules, driving laws, or highway regulations, route it to 'traffic_expert'.
-       - Otherwise, route it to 'web_researcher'.
+    2. Extract the singular verifiable core claim. Normalize it into professional English.
+       - Strip out emotional language, opinions, and social media noise.
+    3. Categorize the research requirement:
+       - If the claim is about local events, government announcements, or specific Sri Lankan news likely found in our internal database, route it to 'local_researcher'.
+       - If the claim is about international news, general knowledge, or requires real-time broad internet searching, route it to 'web_researcher'.
 
     Return the result EXACTLY as a JSON object with the following keys:
     {{
@@ -42,7 +39,6 @@ def triage_agent(state: AgentState) -> dict:
     
     try:
         response = model.generate_content(prompt)
-        # Clean the response to ensure it's valid JSON
         cleaned_response = response.text.strip().replace('```json', '').replace('```', '')
         result = json.loads(cleaned_response)
         
@@ -52,8 +48,7 @@ def triage_agent(state: AgentState) -> dict:
             "routing_destination": result.get("routing_destination", "web_researcher")
         }
     except Exception as e:
-        print(f"Error in triage_agent: {e}")
-        # Fallback values
+        print(f"Error in claim_extractor_agent: {e}")
         return {
             "language": "English",
             "extracted_claim": raw_input,

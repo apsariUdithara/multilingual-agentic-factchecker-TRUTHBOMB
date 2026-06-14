@@ -10,15 +10,19 @@ model = genai.GenerativeModel('gemini-2.5-flash-lite')
 def web_researcher_agent(state: AgentState) -> dict:
     """
     Uses Gemini and DuckDuckGo to verify general claims.
+    Search is restricted to trusted domains to ensure data credibility.
     """
     claim = state.get("extracted_claim", "")
     
-    # 1. Perform web search
+    # 1. Perform web search (Restricted to trusted sites in tool)
     search_results = web_search.invoke({"query": claim})
     
     # 2. Use Gemini to summarize and verify
     prompt = f"""
-    You are a Fact-Checking Researcher. Your task is to verify the following claim using the provided search results.
+    You are a Senior Fact-Checking Researcher. Your task is to verify the following claim.
+    
+    CRITICAL: The search results provided are specifically retrieved from TRUSTED news organizations 
+    (e.g., Ada Derana, NewsFirst, Daily Mirror, Official Govt Portal) to ensure high credibility.
     
     Claim: {claim}
     
@@ -26,11 +30,12 @@ def web_researcher_agent(state: AgentState) -> dict:
     {search_results}
     
     Tasks:
-    1. Summarize the key facts found in the search results that are relevant to the claim.
-    2. Identify if the claim is supported, refuted, or if there is insufficient evidence.
-    3. Cite sources or general consensus where possible.
+    1. Summarize the findings from these authoritative sources.
+    2. Explicitly state which trusted site provided the information.
+    3. Determine if the claim is SUPPORTED, REFUTED, or UNVERIFIED based on these specific results.
+    4. If the results are marked as 'UNRESTRICTED', treat them with extreme caution and look for official corroboration.
     
-    Provide a structured summary of your findings.
+    Provide a professional, source-cited summary.
     """
     
     try:
@@ -42,7 +47,7 @@ def web_researcher_agent(state: AgentState) -> dict:
         new_output = {
             "agent": "web_researcher",
             "findings": verification_summary,
-            "source_type": "web_search"
+            "source_type": "trusted_web_search"
         }
         
         return {

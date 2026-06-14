@@ -1,33 +1,33 @@
 from src.state import AgentState
-from src.tools.traffic_db_tool import verify_traffic_law_claim
+from src.tools.local_db_tool import verify_claim_against_local_db
 
-def traffic_expert_agent(state: AgentState) -> dict:
+def local_researcher_agent(state: AgentState) -> dict:
     """
-    Uses the Phi-3.5-mini LoRA model and local vector DB to verify traffic claims.
+    Uses the local vector DB (OSINT context) to verify the extracted claim.
     """
     claim = state.get("extracted_claim", "")
     
     try:
         # Invoke the local tool
-        verification_summary = verify_traffic_law_claim.invoke({"claim": claim})
+        verification_summary = verify_claim_against_local_db.invoke({"claim": claim})
         
         # Update agent_outputs
         current_outputs = state.get("agent_outputs", [])
         new_output = {
-            "agent": "traffic_expert",
+            "agent": "local_researcher",
             "findings": verification_summary,
-            "source_type": "local_traffic_db"
+            "source_type": "local_osint_db"
         }
         
         return {
             "agent_outputs": current_outputs + [new_output]
         }
     except Exception as e:
-        print(f"Error in traffic_expert_agent: {e}")
+        print(f"Error in local_researcher_agent: {e}")
         return {
             "agent_outputs": state.get("agent_outputs", []) + [{
-                "agent": "traffic_expert",
-                "findings": f"Failed to perform traffic law research locally: {e}",
+                "agent": "local_researcher",
+                "findings": f"Failed to perform local database research: {e}",
                 "source_type": "error"
             }]
         }
