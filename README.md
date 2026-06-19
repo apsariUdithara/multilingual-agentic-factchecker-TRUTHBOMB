@@ -21,6 +21,11 @@ At the heart of the system is a Phi-3.5-mini-instruct model that has been underw
 - Normalization Logic: It removes emotion, slang, and social media "noise," outputting a singular English declarative claim that is optimized for search engines.
 - Deployment: The model is deployed locally via the GGUF format using the llama-cpp-python engine. This ensures high-speed inference and full GPU offloading on consumer-grade hardware.
 
+**Model Fine-Tuning Notebook:**
+> This Colab notebook is designed to fine-tune a pre-trained language model (specifically, unsloth/Phi-3.5-mini-instruct) for an extraction task. It then converts the fine-tuned model into a GGUF format and quantizes it to a smaller, more efficient 4-bit version for deployment. Finally, it provides options to download both the LoRA adapters and the quantized GGUF model.
+> 
+> 🔗 [**Access the Fine-Tuning Colab Notebook**](https://colab.research.google.com/drive/1SwNQOrSdq9DHXAcMZg0S73ZBavl3ZQYt?usp=sharing)
+
 ### 2. Multi-Agent Orchestration (LangGraph Pipeline)
 TruthBomb uses LangGraph to manage a sophisticated state-based agent workflow. This allows the system to be dynamic—choosing different research paths based on the nature of the claim.
 - State Persistence: The system maintains an AgentState object that tracks findings as they move through different nodes.
