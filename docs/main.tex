@@ -1,0 +1,687 @@
+\documentclass[12pt,a4paper]{article}
+\usepackage{graphicx}
+\usepackage{titlesec}
+\usepackage{setspace}
+\usepackage{geometry}
+\geometry{margin=1in}
+
+\usepackage{graphicx}
+\usepackage{subcaption}
+\usepackage{float}
+\usepackage{hyperref}
+
+% Formatting
+\setstretch{1.15}
+\titleformat{\section}{\large\bfseries}{\thesection.}{1em}{}
+\titleformat{\subsection}{\normalsize\bfseries}{\thesubsection.}{1em}{}
+\hypersetup{colorlinks=true, linkcolor=blue, citecolor=blue, urlcolor=blue}
+
+
+%----------------------------------------
+\begin{document}
+
+% --------- First Page (Cover Page) ---------
+\begin{titlepage}
+    \centering
+    \includegraphics[width=3cm]{Logo.jpeg}\par\vspace{1cm}
+    {\LARGE \textbf{Department of Electrical and Information Engineering}}\\[0.4cm]
+    {\Large \textbf{University of Ruhuna}}\\[1.5cm]
+    {\Large \textbf{Group Project Assignment}}\\[0.2cm]
+    {\large \textbf{Advanced Artificial Intelligence}}\\[0.2cm]
+    {\large \textbf{EC7203}}\\[6cm]
+
+    % Centered student and project info
+    \begin{tabular}{rr}
+        \large \textbf{EG/2021/4384} & \large \textbf{Achintha H.G.R.} \\
+        \large \textbf{EG/2021/4511} & \large \textbf{Fernando S.A.U.} \\
+        \large \textbf{EG/2021/4516} & \large \textbf{Fonseka C. M.} \\
+        \large \textbf{EG/2021/4751} & \large \textbf{Rathnaweera P. A.G. N.} \\
+    \end{tabular}\\[1cm]
+    {\large \textbf{Computer Engineering (CE)}}\\
+
+    {\large \textbf{xx/05/2026}}\\[2cm]
+    
+\end{titlepage}
+
+
+% --------- Table of Contents ---------
+
+\clearpage
+\phantomsection
+\addcontentsline{toc}{section}{Contents}
+\label{contents}
+\tableofcontents
+\clearpage
+
+% --------- Sections ---------
+%========================= INTRODUCTION ========================%
+\section{Introduction}
+ 
+Social media has become the dominant channel through which information --
+and misinformation -- reaches the public, and the volume of unverified
+claims now far exceeds what human fact-checkers can manually review
+\cite{vykopal, factgpt}. This pressure has driven a
+shift toward automated fact-checking, where large language models (LLMs)
+extract claims, retrieve supporting evidence, and reason toward a verdict
+\cite{veracity, bangare}. A parallel line of work
+decomposes this process across cooperating or debating agents, improving
+transparency and reducing the brittleness of a single monolithic model
+\cite{gautam, ted, mace}.
+ 
+These advances, however, are overwhelmingly built for English and other
+high-resource languages. Recent evidence shows that LLM performance on
+fact-checking tasks degrades sharply for low-resource languages and
+non-Latin scripts, and that the common workaround -- translating everything
+into English -- introduces its own loss of meaning
+\cite{vykopal}. The problem is acute in Sri Lanka, whose
+information ecosystem is genuinely trilingual (Sinhala, Tamil, and English)
+and where social media text is routinely \emph{code-mixed}: a single post
+may switch scripts mid-sentence or render Sinhala phonetically in Latin
+characters (``Singlish''). Off-the-shelf, cloud-centric fact-checkers treat
+such input as noise, and existing multilingual systems seldom address
+code-mixing as a first-class concern \cite{hemtfake}.
+ 
+This work presents \textbf{TruthBomb}, a local-first, multi-agent
+fact-checking engine designed for Sri Lankan social media content. A
+fine-tuned, deterministic extractor first \emph{normalizes} a noisy
+code-mixed post into a single declarative English claim; a hybrid retriever
+(dense + lexical) gathers evidence from a continuously ingested local
+knowledge base; a deterministic, confidence-based router escalates to web
+search only when local evidence is weak; an adjudication stage produces a
+verdict; and a final stage renders that verdict back into English, Sinhala,
+and Tamil. Rather than claiming broad superiority, this project makes three
+\emph{targeted} contributions appropriate to its scope: (i) a dedicated
+fine-tuned stage for claim extraction from code-mixed, low-resource input;
+(ii) local-first OSINT retrieval with score-based web escalation; and
+(iii) trilingual verdict generation for genuinely low-resource languages.
+%==================================================================================%
+
+
+%========================= MOTIVATION ===============================%
+\section{Motivation}
+\label{sec:motivation}
+ 
+The case for a Sri Lanka--specific system rests on three observations that
+generic fact-checkers do not accommodate.
+ 
+\paragraph{Language reality, not language coverage.}
+Many ``multilingual'' systems advertise support for hundreds of languages by
+relying on machine translation into English before any reasoning occurs
+\cite{bangare}. This pipeline assumes clean, monolingual
+input. Sri Lankan posts violate that assumption: they mix Sinhala, Tamil,
+English, and romanized Singlish within a single utterance, where a naive
+translation step either fails or silently distorts the claim. We therefore
+treat the first stage not as translation but as \emph{normalization} --
+language conversion, claim isolation, and declarative reformulation in one
+fine-tuned step -- so that downstream agents always receive a clean,
+verifiable target. Because the same input distribution is what general LLMs
+handle worst \cite{vykopal}, a small specialized model
+fine-tuned on this exact task is both the cheapest and the most reliable
+remedy \cite{factgpt}.
+ 
+\paragraph{Evidence sovereignty, latency, and auditability.}
+Cloud-only fact-checkers send every query to an external search or LLM
+service, which is costly, slow, and opaque about \emph{which} evidence drove
+a verdict. TruthBomb instead maintains a continuously ingested local
+knowledge base and consults it first; web search is invoked only as an
+escalation path when local confidence is low. Crucially, this routing is
+\emph{deterministic and score-based} rather than delegated to an LLM, which
+avoids an extra inference call and makes the decision auditable -- a property
+prior work identifies as essential for trustworthy fact-checking
+\cite{veracity}.
+ 
+\paragraph{Accessibility for the people most exposed.}
+A verdict is only useful if its intended audience can read it. The
+communities most exposed to Sinhala and Tamil misinformation are precisely
+those least served by English-only output. Producing the final verdict and
+its reasoning in all three languages is therefore not a cosmetic feature but
+the point of the system: it closes the loop between the languages
+misinformation arrives in and the languages a correction must be delivered
+in. In keeping with the project's scope, we frame this as a best-effort,
+honestly evaluated capability rather than a claim of production-grade
+translation quality.
+%==================================================================================%
+
+
+%========================= PROBLEM STATEMENT ========================%
+\section{Problem Statement}
+\label{sec:problem-statement}
+ 
+\textbf{Core problem.} Given a short, potentially noisy and code-mixed social
+media post written in Sinhala, Tamil, English, or romanized Singlish, produce
+a verifiable, evidence-grounded verdict together with reasoning that is
+accessible to the language community in which the post originated.
+ 
+A monolithic LLM call is ill-suited to this task: it conflates
+language understanding, claim isolation, evidence gathering, and judgment
+into one opaque step that, as noted above, performs worst on exactly the
+low-resource, code-mixed inputs we care about. We therefore decompose the
+problem into four sub-problems, which correspond directly to the stages of
+the proposed pipeline:
+ 
+\begin{itemize}
+  \item \textbf{P1 -- Claim extraction and normalization.} Convert a
+  code-mixed, possibly non-declarative post into a single normalized English
+  declarative claim, or emit a \texttt{NO\_VERIFIABLE\_CLAIM} sentinel when
+  the post contains no checkable assertion. This must be deterministic and
+  structurally constrained so downstream stages receive reliable input.
+ 
+  \item \textbf{P2 -- Evidence retrieval and routing.} Retrieve relevant
+  evidence from a local knowledge base using hybrid (dense + lexical)
+  search with re-ranking, and decide -- via a deterministic,
+  confidence-based rule -- whether local evidence is sufficient or whether
+  the query must escalate to web search.
+ 
+  \item \textbf{P3 -- Adjudication.} Combine the claim and the retrieved
+  evidence into a verdict (e.g.\ supported / refuted / unverifiable) with an
+  associated confidence and an audit trail of the evidence used, resolving
+  ambiguous cases with a reasoning step only when rules are insufficient.
+ 
+  \item \textbf{P4 -- Trilingual verdict generation.} Render the verdict and
+  its reasoning in English, Sinhala, and Tamil so the output is accessible to
+  the originating community.
+\end{itemize}
+%==================================================================================%
+%========================= LITERATURE REVIEW ========================%
+\section{Literature Review}
+The detection of misinformation on social media has converged on a small set of
+recurring design decisions: whether to \textit{classify} content or to
+\textit{reason} over retrieved evidence; whether to use a single model or to
+decompose the task across cooperating agents; how far to push genuinely
+multilingual coverage; and how much of the verification process to expose to the
+user. This section surveys eight recent works against these axes, identifies the
+paradigm best suited to the present setting --- fact-checking code-mixed Sri
+Lankan social-media content across Singlish, Sinhala, Tamil, and English --- and
+positions the contribution of this project against the resulting gaps.
+
+\subsection{The Research Landscape}
+
+\subsubsection{Multi-agent verification pipelines}
+The clearest recent trend is the decomposition of verification into specialised,
+cooperating agents. Saha et al.~\cite{mace} verify claims against tabular data
+using three agents: a Planner that devises a reasoning strategy, an Executor that
+performs the verification, and a Verifier that audits the Executor and can return
+a ``revise'' signal. Notably, this MACE framework relies on zero-shot
+Chain-of-Thought prompting rather than fine-tuning, yet reaches state-of-the-art
+results while using far smaller models (27--92B versus 235B parameters). Its
+central lesson is that careful orchestration and an explicit verify-and-revise
+loop can substitute for expensive specialisation, while producing interpretable
+verification traces as a by-product.
+
+Gautam~\cite{gautam} widens the remit, arguing that most agentic systems stop at
+detection. The proposed framework employs five agents --- Indexer, Classifier,
+Extractor, Corrector, and Verification --- that together cover classification,
+evidence retrieval and ranking, correction, and, distinctively, source provenance
+and root-cause identification. The work is conceptual, presenting the framework
+without experimental evaluation, but it elevates audit trails and source
+provenance to first-class design concerns.
+
+Liu et al.~\cite{ted} take decomposition in an adversarial direction. In their
+TruEDebate (TED) system, two ``DebateFlow'' teams argue for and against a claim
+through opening statements, cross-examination, rebuttal, and closing, while an
+``InsightFlow'' layer (a Synthesis agent plus an Analysis agent built on a
+role-aware encoder and a debate graph) renders the final judgment. On the ARG-EN
+and ARG-CN datasets, TED outperforms traditional methods while substantially
+improving interpretability, demonstrating that structured disagreement --- not
+just sequential delegation --- is a viable mechanism for resolving ambiguous
+claims.
+
+\subsubsection{End-to-end LLM fact-checking systems}
+A parallel line of work prioritises deployable systems over novel agent
+topologies. Curtis et al.~\cite{veracity} pair an LLM with web-retrieval agents in
+their Veracity system to assess user-submitted claims, returning a numerical
+veracity score alongside plain-language explanations, with multilingual support
+and a messaging-style interface. Its emphasis on transparency, accessibility, and
+serving as an open research test-bed reflects a recognition that high accuracy
+alone does not make a system trustworthy or usable.
+
+Bangare et al.~\cite{bangare} present a more applied effort built around the
+Gemini API for claim understanding, translation, and reasoning, combined with the
+Google Fact Check Tools API for verification, with LLM reasoning as a fallback
+when no prior fact-check exists. Although its evaluation is limited, it is a useful
+reference because it instantiates the same engineering pattern adopted here: claim
+extraction, then LLM reasoning, then verification against external sources, across
+multiple languages.
+
+\subsubsection{Claim matching and previously-fact-checked claim detection}
+Two works isolate the upstream problem of recognising claims rather than
+adjudicating them. Choi and Ferrara~\cite{factgpt} treat claim matching as a
+textual-entailment task --- deciding whether new content aligns with, contradicts,
+or is irrelevant to an already-debunked claim --- and fine-tune smaller LLMs on a
+synthetic dataset to match the accuracy of much larger models. Their FACT-GPT work
+supplies two findings directly relevant to this project: that small, task-specific
+fine-tuned models can outperform zero-shot large models, and that synthetic data
+is a legitimate training resource, subject to the usual distillation caveats.
+
+Vykopal et al.~\cite{vykopal} provide the most rigorous multilingual evidence in
+the set: an evaluation of seven LLMs across twenty languages in monolingual and
+cross-lingual settings. LLMs perform well on high-resource languages but degrade
+on low-resource ones, and translating source text into English measurably helps
+the low-resource cases. This empirically supports normalising low-resource and
+code-mixed input toward English as an intermediate representation.
+
+\subsubsection{Multimodal and multilingual classification}
+Jadhav et al.~\cite{hemtfake} represent the alternative paradigm: rather than
+reasoning over evidence, they classify. Their HEMT-Fake work contributes a
+74{,}000-article multilingual--multimodal dataset (Hindi, Gujarati, Marathi,
+Telugu, and English with paired images) and a hybrid architecture fusing
+transformer embeddings, a CNN--BiLSTM encoder, ResNet image features, and
+GraphSAGE metadata via multi-head attention, with an explainability layer
+combining attention, SHAP, and LIME. It reports roughly a 5\% Macro-F1 gain over
+XLM-R and mBERT (7--8\% on low-resource languages) and resilience to adversarial
+paraphrasing. It shows that the classification paradigm can deliver strong
+multilingual and multimodal performance with explanation, but it does not produce
+evidence-grounded verdicts or reasoning traces.
+
+\subsection{Selecting the Most Suitable Paradigm}
+For the present setting, the agentic, retrieval-grounded paradigm
+(\cite{mace,gautam,ted,veracity,bangare}) is more appropriate than the
+classification paradigm~\cite{hemtfake} for three reasons. First, the system must
+produce auditable, evidence-backed verdicts rather than opaque labels; the
+classification approach optimises a decision boundary but cannot point to the
+source that justifies a verdict. Second, the targeted misinformation is
+fast-moving and local, so the system must reason over freshly retrieved evidence
+rather than over patterns frozen at training time --- the explicit goal of the
+retrieval-grounded systems. Third, the modular, agent-based designs allow each
+stage to be evaluated and improved independently, which suits a production
+pipeline. Among the agentic works, the verify-and-revise loop of MACE~\cite{mace}
+and the provenance emphasis of Gautam~\cite{gautam} are the most directly
+transferable, while Veracity~\cite{veracity} validates the end-user,
+transparency-first framing. HEMT-Fake~\cite{hemtfake} remains relevant as a
+multilingual and explainability benchmark and as a contrasting design point.
+
+\subsection{Comparison with the Proposed Architecture}
+Mapping the proposed system onto the literature reveals substantial alignment with
+established practice alongside several distinguishing choices.
+
+\begin{itemize}
+    \item \textbf{Multi-agent orchestration.} The LangGraph pipeline --- a
+    Claim-Extractor, a routing stage, Local- and Web-Researcher agents, and a
+    Synthesis/Adjudication agent --- mirrors the decomposition logic of
+    MACE~\cite{mace} and Gautam~\cite{gautam}. The Synthesis-and-Adjudication stage
+    with a consistency cross-check is functionally the analogue of the MACE
+    Verifier and the TED Synthesis agent~\cite{ted}.
+    \item \textbf{Evidence grounding.} The Local- and Web-Researcher split
+    parallels the web-retrieval agents of Veracity~\cite{veracity} and the
+    Extractor of Gautam~\cite{gautam}, but the proposed system adds a hybrid local
+    index (ChromaDB dense retrieval plus BM25 lexical matching) consulted
+    \textit{before} the web.
+    \item \textbf{External-API verification.} The use of an LLM for reasoning plus
+    authoritative external sources echoes the Gemini-plus-fact-check-API pattern of
+    Bangare et al.~\cite{bangare}, here substituting a domain-filtered web search
+    over trusted Sri Lankan news and government domains.
+    \item \textbf{Multilingual output.} The trilingual EN/SI/TA verdict aligns with
+    the multilingual ambitions of Vykopal et al.~\cite{vykopal} and
+    HEMT-Fake~\cite{hemtfake}, and the translate-toward-English insight of
+    Vykopal et al. supports the decision to normalise code-mixed input into English
+    claims.
+    \item \textbf{Claim extraction.} The fine-tuned Phi-3.5 GGUF extractor, which
+    converts noisy code-mixed posts into normalised declarative English claims, has
+    the weakest precedent. FACT-GPT~\cite{factgpt} fine-tunes for claim
+    \textit{matching}, not extraction or normalisation, and treats claims as
+    already-formed inputs.
+\end{itemize}
+
+\subsection{Research Gaps}
+Three gaps emerge, modest but real.
+
+\begin{itemize}
+    \item \textbf{Gap 1 --- Claim extraction from code-mixed, low-resource input as
+    a dedicated stage.} The literature treats the upstream problem as claim
+    \textit{matching}~\cite{factgpt} or claim \textit{detection}~\cite{vykopal},
+    assuming a reasonably well-formed input claim. None addresses the normalisation
+    of noisy, code-mixed Singlish/Sinhala/Tamil/English text into clean declarative
+    claims as a distinct, fine-tuned step. Vykopal et al.~\cite{vykopal} show
+    translation toward English helps, but build no extraction model;
+    HEMT-Fake~\cite{hemtfake} is multilingual but classification-only and targets
+    Indian languages.
+    \item \textbf{Gap 2 --- Local-first retrieval with continuous OSINT ingestion
+    and score-based escalation.} Veracity~\cite{veracity} and
+    Bangare et al.~\cite{bangare} route claims directly to the open web or to a
+    fact-check API. The proposed system instead maintains a continuously ingested
+    local knowledge base (Telegram OSINT vectorised into ChromaDB with a
+    synchronised BM25 index) and escalates to the web only when local evidence is
+    insufficient. This local-first, score-gated routing is largely unexplored in
+    the surveyed agentic systems.
+    \item \textbf{Gap 3 --- Trilingual verdict generation for genuinely
+    low-resource languages.} The agentic camp reasons well but is largely
+    English-centric; the multilingual camp~\cite{vykopal,hemtfake} covers more
+    languages but performs detection or matching, not evidence-grounded verdict
+    generation with explanations. Producing adjudicated, explained verdicts in
+    Sinhala and Tamil sits at an intersection the literature keeps separate.
+\end{itemize}
+
+\subsection{Contribution and Positioning}
+This project occupies the underserved intersection of these gaps. It adopts the
+well-validated agentic, retrieval-grounded paradigm --- modular agents, a
+verify-and-revise adjudication step, and provenance-aware audit trails --- and
+extends it in three directions the literature has not combined: a dedicated
+fine-tuned claim-extraction stage for code-mixed low-resource input; a local-first
+retrieval strategy backed by continuous OSINT ingestion with score-based web
+escalation; and trilingual, evidence-grounded verdict generation for Sinhala and
+Tamil. None of these is individually revolutionary, and the project deliberately
+builds on established components rather than proposing a new agent topology; the
+contribution is the integration of a low-resource, code-mixed claim pipeline into
+a transparent multi-agent verification system targeted at a regional
+misinformation ecosystem that prior work does not serve.
+%=======================================================================================%
+
+\section{Methodology}
+\label{sec:methodology}
+
+This section describes the end-to-end design and AI techniques employed in
+TruthBomb. The system follows a linear multi-agent pipeline orchestrated by
+LangGraph (a graph-based stateful agent framework built on LangChain), in which a shared typed state object
+(\texttt{AgentState}) flows through four sequential stages: claim extraction,
+evidence retrieval, adjudication, and trilingual verdict generation. Each
+stage is implemented as an independent agent node, with a deterministic
+router controlling branching between local and web retrieval paths. The
+overall pipeline is illustrated conceptually in Figure~\ref{fig:pipeline}.
+
+\begin{figure}[H]
+\centering
+\fbox{\parbox{0.85\textwidth}{%
+\centering
+\textbf{Input (code-mixed post)}\\[4pt]
+$\downarrow$\\[2pt]
+\textbf{Stage 1: Claim Extractor} \quad (Gemini 2.5 Flash Lite)\\
+language ID $\cdot$ claim normalisation $\cdot$ routing decision\\[4pt]
+$\downarrow$\\[2pt]
+\textbf{Router} \quad (deterministic, confidence-based)\\[4pt]
+\begin{tabular}{ccc}
+  $\swarrow$ & & $\searrow$ \\
+  \textbf{Stage 2a} & & \textbf{Stage 2b} \\
+  Local Researcher & & Web Researcher \\
+  (ChromaDB + Phi-3.5-mini) & & (DuckDuckGo + Gemini) \\
+\end{tabular}\\[4pt]
+$\searrow \quad \swarrow$\\[2pt]
+\textbf{Stage 3: Synthesis Agent} \quad (Gemini 2.5 Flash Lite)\\
+verdict $\cdot$ confidence $\cdot$ rationale $\cdot$ trilingual summary\\[4pt]
+$\downarrow$\\[2pt]
+\textbf{Output (EN / SI / TA)}
+}}
+\caption{High-level architecture of the TruthBomb multi-agent pipeline.}
+\label{fig:pipeline}
+\end{figure}
+
+%-------------------------------------------------------------------
+\subsection{Stage 1 -- Claim Extraction and Language Normalization}
+\label{subsec:extraction}
+
+The first node in the LangGraph workflow is the Claim Extractor agent. Its
+responsibility is threefold: (i)~identify the primary language of the input
+post, (ii)~isolate and normalize the single verifiable core claim into a
+clean, professional English declarative sentence, and (iii)~emit a routing
+signal that determines which retrieval branch the pipeline will follow.
+
+The agent is powered by \textbf{Gemini 2.5 Flash Lite}, Google's lightweight
+instruction-following model accessed via the \texttt{google.generativeai}
+SDK. A structured prompt instructs the model to strip emotional language,
+social-media noise, and opinions from the raw post, retaining only the
+factual assertion that can be checked against evidence. The model is
+constrained to return output exclusively as a JSON object with three fields:
+\texttt{language} (one of \textit{English}, \textit{Sinhala},
+\textit{Tamil}, or \textit{Singlish/Tanglish}), \texttt{extracted\_claim}
+(the normalized English claim), and \texttt{routing\_destination} (either
+\texttt{local\_researcher} or \texttt{web\_researcher}).
+
+The rationale for framing extraction as normalization rather than translation
+is consistent with the findings of Vykopal et al.~\cite{vykopal}: a targeted
+intermediate representation toward English demonstrably improves downstream
+reasoning quality on low-resource and code-mixed inputs. Critically, this
+normalization is performed in a single inference step rather than two
+separate translation and extraction passes, which avoids compounding errors
+and reduces latency.
+
+The routing decision embedded in this output is also deliberate. Claims about
+local Sri Lankan events, government announcements, or incidents that are
+likely represented in the continuously ingested OSINT database are directed
+to the Local Researcher. Claims about international events or topics
+requiring broad real-time internet context are routed to the Web Researcher.
+This design mirrors the routing semantics of MACE~\cite{mace}, in which a
+Planner decides strategy before execution, here collapsed into the extractor
+itself to eliminate an additional inference step.
+
+%-------------------------------------------------------------------
+\subsection{Stage 2a -- Local Evidence Retrieval via Hybrid Search}
+\label{subsec:local-retrieval}
+
+When the router directs execution to the Local Researcher branch, the agent
+queries a continuously maintained local OSINT knowledge base using a
+\textbf{hybrid retrieval strategy} combining dense vector search and lexical
+matching.
+
+\paragraph{Knowledge base construction.}
+The knowledge base is built from live Telegram channel messages ingested via
+the Telethon MTProto client, polling three high-credibility Sri Lankan news
+channels (\texttt{AdaDeranaNews}, \texttt{newsfirstsl},
+\texttt{hirunewsofficial}) at 60-second intervals as a background
+asynchronous task in FastAPI. Each ingested message is stored as a LangChain
+\texttt{Document} object with structured metadata (source channel, message
+ID, timestamp) and embedded using the
+\textbf{paraphrase-multilingual-MiniLM-L12-v2} sentence-transformer model
+from the \texttt{sentence-transformers} library. This model was chosen
+because it produces semantically meaningful embeddings for multilingual text,
+including Sinhala and Tamil, within a 384-dimensional dense vector space.
+Embedded documents are persisted in a \textbf{ChromaDB} vector store.
+
+A \textbf{BM25 lexical index} (via LangChain's \texttt{BM25Retriever}) is
+maintained in parallel and updated every time new documents are added to
+ChromaDB. This dual-index architecture implements the hybrid retrieval
+pattern: dense retrieval captures semantic similarity even when surface
+vocabulary differs, while BM25 captures keyword overlap that dense embeddings
+can miss for short, highly specific named-entity queries (road names, place
+names, official designations).
+
+\paragraph{Retrieval and reasoning.}
+At query time, the normalized claim is submitted to ChromaDB with $k{=}3$
+for dense similarity search. The top-3 retrieved documents are concatenated
+into a context block and passed, together with the claim, to a
+\textbf{fine-tuned Phi-3.5-mini-instruct} model (Microsoft, 2024). The base model
+(\texttt{unsloth/Phi-3.5-mini-instruct}) is loaded in \textbf{4-bit
+quantization} using the BitsAndBytes library with \texttt{torch.float16}
+precision to minimize GPU memory footprint, then augmented with a
+\textbf{LoRA} (Low-Rank Adaptation) adapter
+(\texttt{models/phi3-extractor-lora}) loaded via PEFT. The LoRA adapter was
+fine-tuned on Sri Lanka-specific claim-verification data to specialize the
+model's reasoning for the domain. The model receives a prompt in the
+Phi-3.5-mini chat template format and generates a verification
+summary of up to 512 tokens, which is returned as the Local Researcher's
+findings to the shared state.
+
+In the standalone FastAPI deployment (\texttt{src/main.py}), the same
+knowledge base is queried by combining ChromaDB dense retrieval ($k{=}3$)
+with BM25 ($k{=}2$), de-duplicated by document content, and passed to the
+GGUF-quantized variant of the fine-tuned model (\texttt{phi3-extractor-unsloth.Q4\_K\_M.gguf})
+running via \textbf{llama.cpp}. Structured output is enforced via a
+\textbf{GBNF grammar} that constrains the model to emit only valid JSON
+matching the schema \texttt{\{verdict, confidence\_score, reasoning\}},
+eliminating post-hoc JSON repair and guaranteeing downstream parseability.
+
+%-------------------------------------------------------------------
+\subsection{Stage 2b -- Web Evidence Retrieval via Trusted-Domain Search}
+\label{subsec:web-retrieval}
+
+When the router directs execution to the Web Researcher branch, the agent
+retrieves evidence from the open web while enforcing a domain restriction
+policy to maintain source credibility.
+
+The retrieval tool (implemented as a LangChain \texttt{@tool}) constructs a
+DuckDuckGo query augmented with a compound \texttt{site:} filter covering
+ten pre-vetted Sri Lankan and regional news domains (Ada Derana, NewsFirst,
+Daily Mirror, Financial Times, Lanka Deepa, Virakesari, Economy Next, The
+Island, \texttt{news.lk}, \texttt{government24.gov.lk}). This restricts
+organic search results to authoritative outlets rather than the open web,
+directly addressing the source credibility requirements identified by
+Curtis et al.~\cite{veracity}. A fallback path executes an unrestricted
+DuckDuckGo search if the domain-filtered query returns no results, and the
+fallback status is propagated to the downstream synthesis agent so it may
+weight that evidence with lower confidence.
+
+The raw search results are then passed to \textbf{Gemini 2.5 Flash Lite}
+with a structured prompt that instructs the model to: (i)~summarize the
+findings from the retrieved articles, (ii)~explicitly attribute each
+finding to its source domain, and (iii)~issue a preliminary verdict of
+\textsc{supported}, \textsc{refuted}, or \textsc{unverified} based on the
+retrieved content alone. This preliminary verdict is not exposed as a final
+output; it is appended to the \texttt{agent\_outputs} list in the shared
+state for the Synthesis agent to consume.
+
+%-------------------------------------------------------------------
+\subsection{Stage 3 -- Adjudication and Final Verdict Synthesis}
+\label{subsec:synthesis}
+
+After either retrieval branch completes, both paths converge at the
+\textbf{Synthesis agent}, which is the terminal reasoning node in the
+LangGraph workflow before \texttt{END}.
+
+The Synthesis agent receives the normalized English claim and the full
+\texttt{agent\_outputs} list from shared state, which contains the findings
+and source metadata of whichever researcher executed. A single structured
+prompt to \textbf{Gemini 2.5 Flash Lite} tasks the model with:
+
+\begin{enumerate}
+  \item Determining the final verdict from the four possible values:
+        \textit{True}, \textit{False}, \textit{Misleading}, or
+        \textit{Unverified}.
+  \item Assigning a numerical confidence score (0--100\%).
+  \item Producing a detailed English rationale that cites the evidence used
+        to reach the verdict, providing an audit trail consistent with the
+        provenance requirements articulated by Gautam~\cite{gautam}.
+  \item Rendering a concise two-sentence verdict summary in each of three
+        languages: \textbf{English}, \textbf{Sinhala} (සිංහල), and
+        \textbf{Tamil} (தமிழ்).
+\end{enumerate}
+
+The model is constrained to return output as a JSON object with the schema
+\texttt{\{verdict, confidence\_score, rationale, summaries:\{english,
+sinhala, tamil\}\}}, which the agent parses and stores in
+\texttt{final\_verdict} of the shared state. This structured output is then
+consumed by the API layer and surfaced to the user interface.
+
+The adjudication design is intentionally \emph{single-pass} rather than
+iterative. Given the modular LangGraph architecture, a verify-and-revise
+loop analogous to the MACE Verifier~\cite{mace} could be added as an
+additional node, which remains a direction for future extension.
+
+%-------------------------------------------------------------------
+\subsection{Stage 4 -- Trilingual Verdict Delivery}
+\label{subsec:trilingual}
+
+The trilingual summaries produced by the Synthesis agent address a first-class
+design requirement: the communities most exposed to Sri Lankan misinformation
+are those who read in Sinhala and Tamil, not English. By generating the
+verdict explanation natively in all three languages within a single inference
+call, TruthBomb avoids the translation pipeline that Vykopal et
+al.~\cite{vykopal} show degrades quality for low-resource languages. The
+Gemini model's native multilingual generation capability, which includes
+Sinhala and Tamil, makes this feasible without a separate translation agent.
+
+Both frontend interfaces -- the React/Vite single-page application and the
+Streamlit application -- present the English summary and rationale by
+default, while the Sinhala and Tamil summaries are available in expandable
+detail panels, making the output accessible to all target language communities.
+
+%-------------------------------------------------------------------
+\subsection{Orchestration and State Management}
+\label{subsec:orchestration}
+
+The multi-agent pipeline is orchestrated using \textbf{LangGraph}, a
+graph-based extension of LangChain for building stateful, multi-step agent
+workflows. The pipeline is defined as a \texttt{StateGraph} over the typed
+\texttt{AgentState} dictionary, which carries all inter-agent communication:
+\texttt{raw\_input}, \texttt{language}, \texttt{extracted\_claim},
+\texttt{routing\_destination}, \texttt{agent\_outputs}, and
+\texttt{final\_verdict}. Because state is passed by value rather than by
+side effects, each agent node is a pure function of its state slice, which
+simplifies debugging and enables deterministic re-execution.
+
+Conditional routing is implemented via LangGraph's
+\texttt{add\_conditional\_edges} primitive, where the router function reads
+\texttt{routing\_destination} from state and returns the name of the next
+node. Both the \texttt{local\_researcher} and \texttt{web\_researcher} nodes
+connect unconditionally to \texttt{synthesis} via direct edges, ensuring the
+pipeline always converges regardless of which retrieval branch executed.
+
+The entire pipeline is exposed as a \textbf{FastAPI} REST endpoint
+(\texttt{POST /api/v1/verify}), accepting a JSON payload
+\texttt{\{text: str\}} and returning a structured \texttt{VerificationResponse}
+that includes the raw input, extracted claim, verdict, confidence score,
+retrieved context documents, reasoning, and timestamp. A health check
+endpoint (\texttt{GET /api/v1/health}) reports database readiness, enabling
+deployment monitoring.
+
+%-------------------------------------------------------------------
+\subsection{Summary of AI Techniques}
+\label{subsec:ai-summary}
+
+Table~\ref{tab:techniques} summarises the AI techniques employed at each
+stage and the design rationale for each choice.
+
+\begin{table}[H]
+\centering
+\caption{AI techniques used per pipeline stage.}
+\label{tab:techniques}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{|p{3.5cm}|p{4.5cm}|p{5.5cm}|}
+\hline
+\textbf{Stage} & \textbf{Technique / Model} & \textbf{Rationale} \\
+\hline
+Claim extraction \& routing &
+  Gemini 2.5 Flash Lite (zero-shot structured prompting) &
+  Single-step normalization + routing; avoids cascading translation errors on
+  code-mixed input~\cite{vykopal} \\
+\hline
+Local OSINT retrieval &
+  Dense retrieval (ChromaDB + \texttt{paraphrase-multilingual-MiniLM-L12-v2}) +
+  BM25 lexical retrieval &
+  Hybrid search captures both semantic and keyword similarity; multilingual
+  embeddings handle Sinhala and Tamil tokens \\
+\hline
+Local reasoning &
+  Fine-tuned Phi-3.5-mini-instruct with LoRA (4-bit quantized via PEFT /
+  GGUF via llama.cpp); GBNF grammar for structured output &
+  Domain-adapted small model reduces hallucination; 4-bit quantization
+  enables CPU/low-VRAM deployment; GBNF enforces JSON schema
+  deterministically \\
+\hline
+Web retrieval &
+  DuckDuckGo with trusted-domain \texttt{site:} filter &
+  Restricts retrieved evidence to pre-vetted authoritative Sri Lankan sources;
+  fallback propagated for downstream down-weighting \\
+\hline
+Web summarization &
+  Gemini 2.5 Flash Lite (structured prompt) &
+  Efficient, source-attributed summarization over variable-length search
+  snippets \\
+\hline
+Adjudication \& synthesis &
+  Gemini 2.5 Flash Lite (structured prompt + JSON output) &
+  Combines evidence from any retrieval branch; produces auditable rationale
+  consistent with provenance requirements~\cite{gautam} \\
+\hline
+Trilingual verdict &
+  Gemini 2.5 Flash Lite (native multilingual generation) &
+  Avoids translation pipeline degradation; native SI/TA generation in single
+  pass~\cite{vykopal} \\
+\hline
+Continuous ingestion &
+  Telethon MTProto + asynchronous FastAPI task &
+  Low-latency Telegram polling keeps local knowledge base current without
+  blocking the verification API \\
+\hline
+\end{tabular}
+\end{table}
+
+\section{Implementation}
+\section{Experimental Setup}
+\section{Performance Metrices}
+\section{Evaluation}
+\section{Discussion}
+\section{Conclusions}
+
+\bibliographystyle{IEEEtran}
+\addcontentsline{toc}{section}{References}
+\bibliography{references}
+
+\end{document}
