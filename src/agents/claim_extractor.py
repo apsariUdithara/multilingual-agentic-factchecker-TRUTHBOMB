@@ -1,11 +1,14 @@
-import google.generativeai as genai
 import json
+
+from google import genai
+
 from src.config import GEMINI_API_KEY
 from src.state import AgentState
 
-# Configure Gemini
-genai.configure(api_key=GEMINI_API_KEY)
-model = genai.GenerativeModel('gemini-2.5-flash-lite')
+# New unified SDK: the Client IS the callable surface (no GenerativeModel object).
+client = genai.Client(api_key=GEMINI_API_KEY)
+MODEL_NAME = "gemini-2.5-flash-lite"
+
 
 def claim_extractor_agent(state: AgentState) -> dict:
     """
@@ -13,7 +16,7 @@ def claim_extractor_agent(state: AgentState) -> dict:
     and determine if it should be researched locally or via web search.
     """
     raw_input = state.get("raw_input", "")
-    
+
     prompt = f"""
     You are a Claim Extraction Specialist for a Sri Lankan Social Media Fact-Checking System.
     Analyze the following input:
@@ -36,21 +39,21 @@ def claim_extractor_agent(state: AgentState) -> dict:
         "routing_destination": "str"
     }}
     """
-    
+
     try:
-        response = model.generate_content(prompt)
-        cleaned_response = response.text.strip().replace('```json', '').replace('```', '')
+        response = client.models.generate_content(model=MODEL_NAME, contents=prompt)
+        cleaned_response = response.text.strip().replace("```json", "").replace("```", "")
         result = json.loads(cleaned_response)
-        
+
         return {
             "language": result.get("language", "English"),
             "extracted_claim": result.get("extracted_claim", ""),
-            "routing_destination": result.get("routing_destination", "web_researcher")
+            "routing_destination": result.get("routing_destination", "web_researcher"),
         }
     except Exception as e:
         print(f"Error in claim_extractor_agent: {e}")
         return {
             "language": "English",
             "extracted_claim": raw_input,
-            "routing_destination": "web_researcher"
+            "routing_destination": "web_researcher",
         }

@@ -1,11 +1,13 @@
-import google.generativeai as genai
+from google import genai
+
 from src.config import GEMINI_API_KEY
 from src.state import AgentState
 from src.tools.web_search_tool import web_search
 
-# Configure Gemini
-genai.configure(api_key=GEMINI_API_KEY)
-model = genai.GenerativeModel('gemini-2.5-flash-lite')
+# New unified SDK: the Client IS the callable surface (no GenerativeModel object).
+client = genai.Client(api_key=GEMINI_API_KEY)
+MODEL_NAME = "gemini-2.5-flash-lite"
+
 
 def web_researcher_agent(state: AgentState) -> dict:
     """
@@ -13,10 +15,10 @@ def web_researcher_agent(state: AgentState) -> dict:
     Search is restricted to trusted domains to ensure data credibility.
     """
     claim = state.get("extracted_claim", "")
-    
+
     # 1. Perform web search (Restricted to trusted sites in tool)
     search_results = web_search.invoke({"query": claim})
-    
+
     # 2. Use Gemini to summarize and verify
     prompt = f"""
     You are a Senior Fact-Checking Researcher. Your task is to verify the following claim.
@@ -37,28 +39,29 @@ def web_researcher_agent(state: AgentState) -> dict:
     
     Provide a professional, source-cited summary.
     """
-    
+
     try:
-        response = model.generate_content(prompt)
+        response = client.models.generate_content(model=MODEL_NAME, contents=prompt)
         verification_summary = response.text.strip()
-        
+
         # 3. Update agent_outputs
         current_outputs = state.get("agent_outputs", [])
         new_output = {
             "agent": "web_researcher",
             "findings": verification_summary,
-            "source_type": "trusted_web_search"
+            "source_type": "trusted_web_search",
         }
-        
-        return {
-            "agent_outputs": current_outputs + [new_output]
-        }
+
+        return {"agent_outputs": current_outputs + [new_output]}
     except Exception as e:
         print(f"Error in web_researcher_agent: {e}")
         return {
-            "agent_outputs": state.get("agent_outputs", []) + [{
-                "agent": "web_researcher",
-                "findings": f"Failed to perform research: {e}",
-                "source_type": "error"
-            }]
+            "agent_outputs": state.get("agent_outputs", [])
+            + [
+                {
+                    "agent": "web_researcher",
+                    "findings": f"Failed to perform research: {e}",
+                    "source_type": "error",
+                }
+            ]
         }

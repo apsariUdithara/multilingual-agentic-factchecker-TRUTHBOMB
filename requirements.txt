@@ -16,3 +16,4 @@ llama-cpp-python
 langchain-community
 langchain-huggingface
 sentence-transformers
+google-genai
