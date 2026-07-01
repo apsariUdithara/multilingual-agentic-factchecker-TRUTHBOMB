@@ -11,6 +11,7 @@ fastapi
 uvicorn
 streamlit
 requests
+telethon
 llama-cpp-python
 langchain-community
 langchain-huggingface
