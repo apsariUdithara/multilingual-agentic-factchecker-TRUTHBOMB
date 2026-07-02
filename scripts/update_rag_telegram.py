@@ -30,6 +30,13 @@ from datetime import datetime, timezone
 from typing import Set, Tuple
 
 from dotenv import load_dotenv
+import hashlib
+import logging
+import sys
+from datetime import datetime, timezone
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
 from telethon import TelegramClient
 from langchain_community.vectorstores import Chroma
 from langchain_huggingface import HuggingFaceEmbeddings

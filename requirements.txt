@@ -1,19 +1,34 @@
+# --- Core ML / inference ---
 unsloth
 torch
 transformers
+peft
+llama-cpp-python
+sentence-transformers          # embeddings + cross-encoder reranker
+
+# --- RAG / retrieval ---
 langgraph
 langchain
+langchain-community
+langchain-huggingface
+langchain-text-splitters       # RecursiveCharacterTextSplitter (chunking)
 chromadb
 rank_bm25
-pytest
-python-dotenv
+
+# --- Agents / tools ---
+google-generativeai            # Gemini agents
+duckduckgo-search              # web_search_tool
+telethon                       # Telegram MTProto ingestion
+
+# --- API / frontend bridge ---
 fastapi
 uvicorn
 streamlit
 requests
 telethon
-llama-cpp-python
-langchain-community
-langchain-huggingface
-sentence-transformers
+python-dotenv
+
+# --- Evaluation / testing ---
+scikit-learn                   # metrics in tests/benchmark_accuracy.py
+pytest
 google-genai

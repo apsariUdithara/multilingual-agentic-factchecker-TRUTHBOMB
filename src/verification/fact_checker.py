@@ -83,7 +83,7 @@ class FactChecker:
         Constructs the prompt for the LLM to perform verification.
         """
         return (
-            "Below is a claim and some context retrieved from a database of traffic laws. "
+            "Below is a claim and some context retrieved from a Sri Lankan OSINT news/social-media archive. "
             "Your task is to verify if the claim is supported or refuted by the context. "
             "Output your response strictly in JSON format with the following keys: "
             "'is_verified' (boolean), 'reasoning' (string), and 'sources' (list of strings).\n\n"
