@@ -5,11 +5,19 @@ from src.agents.local_researcher import local_researcher_agent
 from src.agents.web_researcher import web_researcher_agent
 from src.agents.synthesis import synthesis_agent
 
-def router(state: AgentState):
+
+def router(state: AgentState) -> str:
     """
-    Determines which expert node to route to based on extractor output.
+    Interim deterministic routing (local-first).
+
+    The claim extractor no longer chooses a route (Phase 2). Until the dedicated
+    retrieve node (Phase 3) and the score gate (Phase 4) are in place, we default
+    to the local researcher and treat any unknown value as local, so the graph
+    always has a valid edge to follow.
     """
-    return state.get("routing_destination", "web_researcher")
+    dest = state.get("routing_destination") or "local_researcher"
+    return dest if dest in ("local_researcher", "web_researcher") else "local_researcher"
+
 
 # Initialize the Graph
 workflow = StateGraph(AgentState)
@@ -29,8 +37,8 @@ workflow.add_conditional_edges(
     router,
     {
         "local_researcher": "local_researcher",
-        "web_researcher": "web_researcher"
-    }
+        "web_researcher": "web_researcher",
+    },
 )
 
 # Add Edges to Synthesis
@@ -43,6 +51,7 @@ workflow.add_edge("synthesis", END)
 # Compile
 app = workflow.compile()
 
+
 def run_fact_checker(input_text: str):
     """
     Executes the fact-checking pipeline for a given input.
@@ -50,12 +59,15 @@ def run_fact_checker(input_text: str):
     initial_state = {
         "raw_input": input_text,
         "messages": [],
-        "agent_outputs": [],
         "language": "English",
         "extracted_claim": "",
-        "routing_destination": "",
-        "final_verdict": {}
+        "routing_destination": "local_researcher",  # interim local-first default (Phase 4 -> score-based)
+        "agent_outputs": [],
+        "retrieved_docs": [],   # populated by the retrieve node (Phase 3)
+        "retrieval_score": 0.0,  # populated by the retrieve node; drives routing (Phase 4)
+        "audit_trail": [],
+        "final_verdict": {},
     }
-    
+
     result = app.invoke(initial_state)
     return result
