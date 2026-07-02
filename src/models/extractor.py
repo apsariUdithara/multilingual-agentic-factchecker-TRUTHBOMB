@@ -7,8 +7,9 @@ Grammar-constraining is what makes this node deterministic and guaranteed
 parseable -- the model cannot emit prose, markdown, or malformed JSON.
 
 The model is exposed through a lazy singleton (`get_extractor`) so the (heavy)
-GGUF file is loaded once on first use rather than at import time. This keeps
-`src.pipeline` importable and testable even when the model file is absent.
+GGUF file is loaded once on first use rather than at import time. `get_llm`
+exposes that same loaded model so the local verifier can reuse it (one GGUF in
+VRAM, shared between extraction and local verification).
 """
 
 import os
@@ -88,7 +89,7 @@ class LinguisticExtractor:
         return self.extract(raw_post)["extracted_claim"]
 
 
-# --- Lazy singleton --------------------------------------------------------
+# --- Lazy singletons -------------------------------------------------------
 _extractor_instance = None
 
 
@@ -98,3 +99,13 @@ def get_extractor() -> LinguisticExtractor:
     if _extractor_instance is None:
         _extractor_instance = LinguisticExtractor()
     return _extractor_instance
+
+
+def get_llm() -> Llama:
+    """
+    Return the shared llama.cpp model instance.
+
+    Loaded once (via the extractor singleton) and reused for both claim
+    extraction and local verification, so only one GGUF sits in VRAM.
+    """
+    return get_extractor().llm

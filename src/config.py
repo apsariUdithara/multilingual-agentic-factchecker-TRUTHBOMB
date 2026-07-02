@@ -7,10 +7,10 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 TAVILY_API_KEY = os.getenv("TAVILY_API_KEY")
 
 # Local Model Configuration
-# GGUF model is used for fast inference via llama.cpp (claim extraction / local verify)
+# GGUF model is used for fast inference via llama.cpp (claim extraction + local verify)
 GGUF_MODEL_PATH = "models/phi3-extractor-unsloth.Q4_K_M.gguf"
 
-# LoRA adapter is used for Transformers-based inference (local researcher tool)
+# LoRA adapter (vestigial after Phase 4; local verify now runs on the GGUF model)
 LORA_ADAPTER_PATH = "models/phi3-extractor-lora"
 
 # Legacy compatibility
@@ -62,3 +62,9 @@ TIER_WEIGHT_UNTRUSTED = 0.6
 RECENCY_WEIGHTS = [(7, 1.0), (30, 0.85), (90, 0.7), (365, 0.5)]
 RECENCY_WEIGHT_STALE = 0.35     # older than the last bucket
 RECENCY_WEIGHT_UNKNOWN = 0.7    # missing or unparseable timestamp (kept neutral)
+
+# --- ROUTING (Phase 4) ---
+# Local-first escalation gate. retrieval_score = 1/(1+distance) in (0, 1]; if the
+# best local match meets this bar we verify locally, else escalate to web search.
+# NOTE: calibrate against real claims -- 0.4 is a conservative starting default.
+ROUTING_SCORE_THRESHOLD = 0.4

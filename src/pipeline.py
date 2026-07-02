@@ -1,5 +1,6 @@
 from langgraph.graph import StateGraph, END
 from src.state import AgentState
+from src.config import ROUTING_SCORE_THRESHOLD
 from src.agents.claim_extractor import claim_extractor_agent
 from src.agents.retriever import retrieve_node
 from src.agents.local_researcher import local_researcher_agent
@@ -9,14 +10,15 @@ from src.agents.synthesis import synthesis_agent
 
 def router(state: AgentState) -> str:
     """
-    Interim deterministic routing (local-first).
+    Score-based routing (deterministic, auditable).
 
-    The retrieve node now populates `retrieval_score`, but routing does not use it
-    yet. Until the score gate lands (Phase 4), we default to the local researcher
-    and treat any unknown value as local, so the graph always has a valid edge.
+    Local-first: if the best local evidence meets ROUTING_SCORE_THRESHOLD, verify
+    against the local OSINT knowledge base; otherwise escalate to trusted web search.
+    The score is `retrieval_score` (best dense similarity in the KB) set by the
+    retrieve node.
     """
-    dest = state.get("routing_destination") or "local_researcher"
-    return dest if dest in ("local_researcher", "web_researcher") else "local_researcher"
+    score = state.get("retrieval_score", 0.0) or 0.0
+    return "local_researcher" if score >= ROUTING_SCORE_THRESHOLD else "web_researcher"
 
 
 # Initialize the Graph
@@ -32,7 +34,7 @@ workflow.add_node("synthesis", synthesis_agent)
 # Set Entry Point
 workflow.set_entry_point("claim_extractor")
 
-# Extract -> Retrieve -> (route)
+# Extract -> Retrieve -> (score-based route)
 workflow.add_edge("claim_extractor", "retrieve")
 workflow.add_conditional_edges(
     "retrieve",
@@ -61,7 +63,7 @@ def run_fact_checker(input_text: str):
         "messages": [],
         "language": "English",
         "extracted_claim": "",
-        "routing_destination": "local_researcher",  # interim local-first default (Phase 4 -> score-based)
+        "routing_destination": "local_researcher",  # seeded; router now decides by score
         "agent_outputs": [],
         "retrieved_docs": [],
         "retrieval_score": 0.0,
