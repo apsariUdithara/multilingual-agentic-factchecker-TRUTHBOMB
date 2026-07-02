@@ -68,3 +68,19 @@ RECENCY_WEIGHT_UNKNOWN = 0.7    # missing or unparseable timestamp (kept neutral
 # best local match meets this bar we verify locally, else escalate to web search.
 # NOTE: calibrate against real claims -- 0.4 is a conservative starting default.
 ROUTING_SCORE_THRESHOLD = 0.4
+
+# --- VERDICT VOCABULARY (canonical, Phase 5) ---
+# The single source of truth for final verdict labels across the project.
+VERDICT_TRUE = "True"
+VERDICT_FALSE = "False"
+VERDICT_MISLEADING = "Misleading"
+VERDICT_UNVERIFIED = "Unverified"
+
+# --- ADJUDICATION (Phase 5) ---
+# Stance confidence (0-100) at/above which a lone stance yields a deterministic
+# True/False without invoking Gemini.
+ADJUDICATION_HIGH_CONFIDENCE = 70
+# Below this, a lone stance is too weak to assert anything -> Unverified.
+# Between MIN and HIGH is the "borderline" band that Gemini adjudicates (and is
+# the only path that can produce a Misleading verdict).
+ADJUDICATION_MIN_CONFIDENCE = 40

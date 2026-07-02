@@ -5,7 +5,8 @@ from src.agents.claim_extractor import claim_extractor_agent
 from src.agents.retriever import retrieve_node
 from src.agents.local_researcher import local_researcher_agent
 from src.agents.web_researcher import web_researcher_agent
-from src.agents.synthesis import synthesis_agent
+from src.agents.adjudicator import adjudicator_agent
+from src.agents.translator import translator_agent
 
 
 def router(state: AgentState) -> str:
@@ -14,8 +15,6 @@ def router(state: AgentState) -> str:
 
     Local-first: if the best local evidence meets ROUTING_SCORE_THRESHOLD, verify
     against the local OSINT knowledge base; otherwise escalate to trusted web search.
-    The score is `retrieval_score` (best dense similarity in the KB) set by the
-    retrieve node.
     """
     score = state.get("retrieval_score", 0.0) or 0.0
     return "local_researcher" if score >= ROUTING_SCORE_THRESHOLD else "web_researcher"
@@ -29,7 +28,8 @@ workflow.add_node("claim_extractor", claim_extractor_agent)
 workflow.add_node("retrieve", retrieve_node)
 workflow.add_node("local_researcher", local_researcher_agent)
 workflow.add_node("web_researcher", web_researcher_agent)
-workflow.add_node("synthesis", synthesis_agent)
+workflow.add_node("adjudicate", adjudicator_agent)
+workflow.add_node("translate", translator_agent)
 
 # Set Entry Point
 workflow.set_entry_point("claim_extractor")
@@ -45,10 +45,11 @@ workflow.add_conditional_edges(
     },
 )
 
-# Researchers -> Synthesis -> END
-workflow.add_edge("local_researcher", "synthesis")
-workflow.add_edge("web_researcher", "synthesis")
-workflow.add_edge("synthesis", END)
+# Researchers -> Adjudicate -> Translate -> END
+workflow.add_edge("local_researcher", "adjudicate")
+workflow.add_edge("web_researcher", "adjudicate")
+workflow.add_edge("adjudicate", "translate")
+workflow.add_edge("translate", END)
 
 # Compile
 app = workflow.compile()
@@ -63,7 +64,7 @@ def run_fact_checker(input_text: str):
         "messages": [],
         "language": "English",
         "extracted_claim": "",
-        "routing_destination": "local_researcher",  # seeded; router now decides by score
+        "routing_destination": "local_researcher",  # seeded; router decides by score
         "agent_outputs": [],
         "retrieved_docs": [],
         "retrieval_score": 0.0,

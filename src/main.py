@@ -1,22 +1,13 @@
 """
 FastAPI transport layer for the TruthBomb fact-checking engine.
 
-Architecture note (Phase 1 — single canonical pipeline):
-    This module is now a *thin* HTTP boundary. All verification logic lives in the
-    LangGraph pipeline (``src.pipeline.run_fact_checker``). The endpoint's only jobs
-    are: (1) validate the request, (2) run the graph off the event loop, and
-    (3) map the graph's final state onto the public response schema.
+Thin HTTP boundary over the LangGraph pipeline (`src.pipeline.run_fact_checker`).
+The endpoint validates the request, runs the graph off the event loop, and maps
+the graph's final state onto the public response schema.
 
-    Removed in Phase 1:
-        - the inline retrieval + ``execute_fact_checker_llm`` path (duplicated the graph)
-        - the in-process Telegram ingestion worker and its hardcoded credentials
-          (ingestion now runs standalone via ``scripts/update_rag_telegram.py``)
-        - eager startup loading of embeddings / vector store / extractor model
-          (the graph's agents lazy-load their own resources on first use)
-
-    Not changed in Phase 1 (deliberately deferred):
-        - the public response schema and ``frontend/types.ts`` (widened in Phase 5)
-        - the extractor model, routing strategy, and re-ranking (Phases 2-4)
+Phase 5: the response now carries the canonical verdict (incl. MISLEADING),
+trilingual reasoning (EN/SI/TA), a per-node audit trail, and retrieved context
+built from the real re-ranked evidence.
 """
 
 import os
@@ -37,7 +28,7 @@ logger = logging.getLogger(__name__)
 app = FastAPI(
     title="TruthBomb Fact-Checking Engine",
     description="Thin HTTP boundary over the LangGraph multi-agent verification pipeline.",
-    version="1.1.0",
+    version="1.2.0",
 )
 
 
@@ -52,33 +43,26 @@ class VerificationRequest(BaseModel):
 class VerificationResponse(BaseModel):
     raw_input: str
     extracted_claim_en: str
-    verdict: str
+    verdict: str                         # TRUE | FALSE | MISLEADING | UNVERIFIED
     confidence_score: float
+    reasoning: str                       # English
+    reasoning_si: str                    # Sinhala
+    reasoning_ta: str                    # Tamil
     retrieved_context: List[Dict[str, Any]]
-    reasoning: str
+    audit_trail: List[Dict[str, Any]]
     processed_at: str
 
 
 # =====================================================================
 # GRAPH-STATE -> PUBLIC-SCHEMA MAPPING
-# ---------------------------------------------------------------------
-# The LangGraph synthesis node emits a richer verdict vocabulary
-# ("True"/"False"/"Misleading"/"Unverified"), a percentage-string
-# confidence, and EN/SI/TA summaries. The current public schema (and the
-# frontend) only model a 3-value verdict + float confidence + English
-# reasoning, so we adapt here. The richer fields are surfaced in Phase 5.
 # =====================================================================
-_VERDICT_MAP = {
-    "TRUE": "TRUE",
-    "FALSE": "FALSE",
-    "MISLEADING": "UNVERIFIED",
-    "UNVERIFIED": "UNVERIFIED",
-}
+_ALLOWED_WIRE_VERDICTS = {"TRUE", "FALSE", "MISLEADING", "UNVERIFIED"}
 
 
 def _normalize_verdict(raw_verdict: Any) -> str:
-    """Collapse the graph's verdict vocabulary onto the public 3-value enum."""
-    return _VERDICT_MAP.get(str(raw_verdict).strip().upper(), "UNVERIFIED")
+    """Uppercase the canonical verdict for the wire; unknown -> UNVERIFIED."""
+    verdict = str(raw_verdict).strip().upper()
+    return verdict if verdict in _ALLOWED_WIRE_VERDICTS else "UNVERIFIED"
 
 
 def _parse_confidence(raw_confidence: Any) -> float:
@@ -95,20 +79,20 @@ def _parse_confidence(raw_confidence: Any) -> float:
     return max(0.0, min(1.0, value))
 
 
-def _build_context(agent_outputs: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    """
-    Adapt the graph's per-agent findings into the ContextSource shape the frontend
-    expects. Phase 1 surfaces each agent's textual finding; structured per-document
-    retrieval scores arrive with the dedicated retrieve node in Phase 3.
-    """
+def _build_context(retrieved_docs: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Adapt the re-ranked evidence into the frontend ContextSource shape."""
     context: List[Dict[str, Any]] = []
-    for output in agent_outputs or []:
+    for doc in retrieved_docs or []:
         context.append(
             {
-                "content": output.get("findings", ""),
-                "distance_score": 0.0,
-                "source": f"{output.get('agent', 'unknown')} [{output.get('source_type', 'n/a')}]",
-                "timestamp": "N/A",
+                "content": doc.get("content", ""),
+                "source": doc.get("source", "Unknown"),
+                "tier": doc.get("tier", ""),
+                "timestamp": doc.get("timestamp", "N/A"),
+                # `distance_score` retained for frontend compatibility; now holds the
+                # dense similarity (higher = closer), alongside the fused final_score.
+                "distance_score": doc.get("dense_similarity", 0.0),
+                "final_score": doc.get("final_score", 0.0),
             }
         )
     return context
@@ -126,19 +110,25 @@ async def verify_claim(payload: VerificationRequest) -> VerificationResponse:
         # run_fact_checker is synchronous and performs blocking model / network
         # calls; run it in a worker thread so the event loop stays responsive.
         state = await asyncio.to_thread(run_fact_checker, payload.text)
-    except Exception as exc:  # noqa: BLE001 - surface any pipeline failure as a 500
+    except Exception as exc:  # noqa: BLE001
         logger.exception("Pipeline execution failed.")
         raise HTTPException(status_code=500, detail=f"Pipeline execution error: {exc}")
 
     final_verdict = state.get("final_verdict") or {}
+    summaries = final_verdict.get("summaries") or {}
 
     return VerificationResponse(
         raw_input=state.get("raw_input", payload.text),
         extracted_claim_en=state.get("extracted_claim", ""),
         verdict=_normalize_verdict(final_verdict.get("verdict", "UNVERIFIED")),
         confidence_score=_parse_confidence(final_verdict.get("confidence_score")),
-        retrieved_context=_build_context(state.get("agent_outputs", [])),
-        reasoning=str(final_verdict.get("rationale", "No reasoning provided.")).strip(),
+        reasoning=str(
+            summaries.get("english") or final_verdict.get("rationale", "No reasoning provided.")
+        ).strip(),
+        reasoning_si=str(summaries.get("sinhala", "")).strip(),
+        reasoning_ta=str(summaries.get("tamil", "")).strip(),
+        retrieved_context=_build_context(state.get("retrieved_docs", [])),
+        audit_trail=state.get("audit_trail", []),
         processed_at=datetime.utcnow().isoformat(),
     )
 
