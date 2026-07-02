@@ -15,17 +15,22 @@ from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.retrievers import BM25Retriever
 from langchain_core.documents import Document
 from src.models.extractor import LinguisticExtractor
-from src.config import VECTOR_DB_DIR, EMBEDDING_MODEL_NAME, CHROMA_COLLECTION_NAME, TARGET_CHANNELS
+from src.rag.retriever import HybridRetriever
+from src.config import (
+    VECTOR_DB_DIR, EMBEDDING_MODEL_NAME, CHROMA_COLLECTION_NAME, TARGET_CHANNELS,
+    TELEGRAM_API_ID, TELEGRAM_API_HASH, TELEGRAM_SESSION_NAME,
+    RETRIEVAL_CANDIDATES, RETRIEVAL_TOP_N,
+)
 
 try:
     from llama_cpp import LlamaGrammar
 except ImportError:
     LlamaGrammar = None
 
-# --- TELEGRAM CREDENTIALS ---
-API_ID = 38020229
-API_HASH = 'bad58fa93d224c8320db9639efa7ed5e'
-SESSION_NAME = os.path.join("D:/7th/AI/Project/scripts", 'rag_updater_session')
+# --- TELEGRAM CREDENTIALS (loaded from .env via src.config; never hard-coded) ---
+API_ID = TELEGRAM_API_ID
+API_HASH = TELEGRAM_API_HASH
+SESSION_NAME = TELEGRAM_SESSION_NAME
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)
@@ -40,6 +45,7 @@ embeddings = None
 vector_db = None
 extractor_model = None
 bm25_retriever = None
+retriever = None  # HybridRetriever: dense + sparse + RRF + rerank
 
 # GBNF Grammar strictly enforcing valid JSON output for the fact-checker
 GBNF_GRAMMAR_STR = r'''
@@ -111,13 +117,15 @@ def update_bm25_retriever():
                     docs.append(Document(page_content=text, metadata=meta or {}))
                 if docs:
                     bm25_retriever = BM25Retriever.from_documents(docs)
+                    if retriever is not None:
+                        retriever.set_bm25(bm25_retriever)
                     logger.info(f"BM25 index updated with {len(docs)} documents.")
     except Exception as e:
         logger.error(f"Failed to update BM25 retriever: {e}")
 
 @app.on_event("startup")
 async def startup_event():
-    global embeddings, vector_db, extractor_model
+    global embeddings, vector_db, extractor_model, retriever
     logger.info("Bootstrapping localized embedding models and vector infrastructure...")
     try:
         embeddings = HuggingFaceEmbeddings(model_name=EMBEDDING_MODEL_NAME)
@@ -127,6 +135,7 @@ async def startup_event():
             collection_name=CHROMA_COLLECTION_NAME
         )
         logger.info("ChromaDB state successfully mounted and pooled.")
+        retriever = HybridRetriever(vector_db)
         update_bm25_retriever()
     except Exception as e:
         logger.critical(f"Failed to bind vector database instance: {e}")
@@ -244,33 +253,27 @@ async def verify_claim(payload: VerificationRequest):
         extracted_claim = extractor_model.extract_claim(payload.text)
         logger.info(f"Normalized Semantic Claim: {extracted_claim}")
 
-        # Step 2: Hybrid Context Retrieval (ChromaDB + BM25)
-        matched_docs = vector_db.similarity_search_with_score(query=extracted_claim, k=3)
-        
-        hybrid_docs = {}
-        for doc, score in matched_docs:
-            hybrid_docs[doc.page_content] = {"doc": doc, "score": float(score), "source": "chroma"}
+        # Step 2: Hybrid Context Retrieval (Chroma dense + BM25 sparse -> RRF -> rerank)
+        if retriever is None:
+            raise RuntimeError("Retriever is not initialised.")
 
-        if bm25_retriever:
-            bm25_results = bm25_retriever.invoke(extracted_claim)[:2]
-            for doc in bm25_results:
-                if doc.page_content not in hybrid_docs:
-                    hybrid_docs[doc.page_content] = {"doc": doc, "score": 1.0, "source": "bm25"}
+        retrieved = retriever.retrieve(
+            extracted_claim, candidates=RETRIEVAL_CANDIDATES, top_n=RETRIEVAL_TOP_N
+        )
 
         formatted_context = []
         raw_context_texts = []
-        
-        for content, data in hybrid_docs.items():
-            doc = data["doc"]
-            raw_context_texts.append(content)
+        for item in retrieved:
+            doc = item["doc"]
+            raw_context_texts.append(doc.page_content)
             formatted_context.append({
-                "content": content,
-                "distance_score": data["score"],
-                "source": f"{doc.metadata.get('source', 'Unknown')} [{data['source']}]",
-                "timestamp": doc.metadata.get("timestamp", "N/A")
+                "content": doc.page_content,
+                "distance_score": round(item["fused_score"], 6),
+                "source": f"{doc.metadata.get('source', 'Unknown')} [{'+'.join(item['sources'])}]",
+                "timestamp": doc.metadata.get("timestamp", "N/A"),
             })
-            
-        logger.info(f"Extracted {len(formatted_context)} relevant context nodes from hybrid search.")
+
+        logger.info(f"Retrieved {len(formatted_context)} ranked context nodes (RRF + rerank).")
 
         # Step 3: Fact-Checking Analysis (LLM with GBNF)
         analysis = execute_fact_checker_llm(extracted_claim, raw_context_texts)

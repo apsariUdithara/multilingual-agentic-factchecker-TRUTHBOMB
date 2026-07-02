@@ -24,10 +24,15 @@ def main():
     processed = 0
 
     for item in dataset:
-        core_claim = item["core_claim"]
-        if core_claim.endswith("- FALSE"):
+        # Prefer an explicit label field; fall back to a suffix convention on the
+        # event title. (The dataset key is ``core_event``, not ``core_claim``.)
+        label = str(item.get("label", "")).upper()
+        core_event = item.get("core_event", "")
+        if label in {"TRUE", "FALSE", "UNVERIFIED"}:
+            true_verdict = label
+        elif core_event.endswith("- FALSE"):
             true_verdict = "FALSE"
-        elif core_claim.endswith("- UNVERIFIED"):
+        elif core_event.endswith("- UNVERIFIED"):
             true_verdict = "UNVERIFIED"
         else:
             true_verdict = "TRUE"
