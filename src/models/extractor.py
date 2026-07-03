@@ -554,8 +554,44 @@
 
 
 import os
+import re
 from llama_cpp import Llama
 from src.config import GGUF_MODEL_PATH
+
+def is_suspected_hallucination(raw_post: str, extracted_claim: str) -> bool:
+    """
+    Checks if the local model's output is suspected to be a hallucinated/memorized training sample
+    based on exact match or severe semantic topical mismatch.
+    """
+    raw_lower = raw_post.lower()
+    extracted_lower = extracted_claim.lower()
+    
+    # 1. Exact match for known overfit/hallucinated training samples
+    known_hallucinations = [
+        "the supreme court ruled that the 2020 election was not free and fair",
+        "supreme court ruled that the 2020 election was not free and fair",
+        "the 2020 election was not free and fair",
+    ]
+    for h in known_hallucinations:
+        if h in extracted_lower:
+            return True
+            
+    # 2. Topical mismatch check: Claim mentions court/election, but the raw post doesn't mention any related terms
+    court_keywords = {"court", "supreme", "ruling", "judge", "rule", "adikarana", "naduva", "නඩු", "අධිකරණ", "උසාවි"}
+    election_keywords = {"election", "vote", "chanda", "ඡන්ද", "මැතිවරණ"}
+    
+    has_extracted_court = any(w in extracted_lower for w in {"court", "supreme", "ruling", "judge"})
+    has_extracted_election = any(w in extracted_lower for w in {"election", "vote", "poll"})
+    
+    if has_extracted_court:
+        if not any(w in raw_lower for w in court_keywords):
+            return True
+            
+    if has_extracted_election:
+        if not any(w in raw_lower for w in election_keywords):
+            return True
+            
+    return False
 
 class LinguisticExtractor:
     def __init__(self, model_path=GGUF_MODEL_PATH):
@@ -572,26 +608,67 @@ class LinguisticExtractor:
         )
 
     def extract_claim(self, raw_post: str) -> str:
-        # 1. FIXED PROMPT SPACING (Added \n after Response:)
+        # Few-Shot In-Context Prompting to anchor the model's extraction capabilities
+        # and prevent it from hallucinating memorized training samples on noisy/garbled inputs.
         prompt = (
             "Below is an instruction that describes a task, paired with an input that provides further context. "
             "Write a response that appropriately completes the request.\n\n"
             "### Instruction:\n"
             "You are an expert linguistic AI. Extract the core verifiable claim from the following Sri Lankan social media post. "
             "Translate it to professional English, remove all emotion and slang, and output only the declarative claim.\n\n"
+            "### Example 1 Input:\n"
+            "Highway eka ada wahalada? Kadawatha gawa loku accident ekak wela kiyala aranchiyak awa. Kauda danne?\n\n"
+            "### Example 1 Response:\n"
+            "The highway is closed today due to a major accident near Kadawatha.\n\n"
+            "### Example 2 Input:\n"
+            "Breaking: Central bank eken interest rates drop karanna decision ekak aran thiyenne next month indan.\n\n"
+            "### Example 2 Response:\n"
+            "The Central Bank has decided to lower interest rates starting next month.\n\n"
+            "### Example 3 Input:\n"
+            "6 මැණික්හින්ඉන් 'මුතූ' සිව්වැනි බිල්ලත් ගනී කද ள் SN වට්ටම් டட තැකී කෑම දන්න ගිහින් ජීවිතයක් අහිමි වයි\n\n"
+            "### Example 3 Response:\n"
+            "'Muthu' of Menikhinna claims its fourth victim; a life is lost while trying to offer food.\n\n"
             f"### Input:\n{raw_post}\n\n"
             "### Response:\n"
         )
 
-        # 2. INJECTED STOP TOKENS
+        # Decoder Parameter Tuning:
+        # Introducing a low temperature and repeat penalty prevents the model from getting stuck
+        # on deterministic training sample sequence loops when faced with noisy text.
         response = self.llm(
             prompt,
             max_tokens=128,
-            temperature=0.0, 
-            top_p=1.0,
+            temperature=0.2, 
+            top_p=0.9,
+            repeat_penalty=1.15,
             echo=False,
-            stop=["<|end|>", "<|endoftext|>", "### Instruction:"] # Forces the model to stop hallucinating extra sentences
+            stop=["<|end|>", "<|endoftext|>", "### Instruction:", "### Input:"]
         )
         
         extracted_text = response["choices"][0]["text"].strip()
+
+        # Step 3: Check for suspected hallucinations and route to Gemini API fallback if needed
+        if is_suspected_hallucination(raw_post, extracted_text):
+            print("WARNING: Suspected hallucination detected in local extraction. Falling back to Gemini API...")
+            try:
+                import google.generativeai as genai
+                from src.config import GEMINI_API_KEY
+                
+                if GEMINI_API_KEY:
+                    genai.configure(api_key=GEMINI_API_KEY)
+                    gemini_model = genai.GenerativeModel('gemini-2.5-flash-lite')
+                    
+                    gemini_prompt = (
+                        "You are an expert linguistic AI. Extract the core verifiable claim from the following Sri Lankan social media post. "
+                        "Translate it to professional English, remove all emotion and slang, and output only the declarative claim.\n\n"
+                        f"Input: {raw_post}"
+                    )
+                    gemini_response = gemini_model.generate_content(gemini_prompt)
+                    fallback_claim = gemini_response.text.strip()
+                    if fallback_claim:
+                        print(f"Fallback successful. Gemini extracted claim: {fallback_claim}")
+                        return fallback_claim
+            except Exception as e:
+                print(f"Gemini fallback failed: {e}")
+                
         return extracted_text

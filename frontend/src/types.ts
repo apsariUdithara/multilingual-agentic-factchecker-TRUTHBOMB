@@ -13,9 +13,15 @@ export interface ContextSource {
 export interface VerificationResponse {
   raw_input: string;
   extracted_claim_en: string;
-  verdict: 'TRUE' | 'FALSE' | 'UNVERIFIED';
+  verdict: 'TRUE' | 'FALSE' | 'UNVERIFIED' | 'MISLEADING';
   confidence_score: number;
   retrieved_context: ContextSource[];
   reasoning: string;
   processed_at: string;
+  routing_destination?: string;
+  summaries?: {
+    english: string;
+    sinhala: string;
+    tamil: string;
+  };
 }

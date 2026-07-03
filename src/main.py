@@ -21,6 +21,7 @@ from src.config import (
     TELEGRAM_API_ID, TELEGRAM_API_HASH, TELEGRAM_SESSION_NAME,
     RETRIEVAL_CANDIDATES, RETRIEVAL_TOP_N,
 )
+from src.pipeline import run_fact_checker
 
 try:
     from llama_cpp import LlamaGrammar
@@ -61,6 +62,7 @@ async def telegram_ingestion_worker():
     client = TelegramClient(SESSION_NAME, API_ID, API_HASH)
     await client.start()
     
+    is_first_run = True
     while True:
         try:
             if vector_db is None:
@@ -77,8 +79,12 @@ async def telegram_ingestion_worker():
                 }
 
             new_documents = []
+            # Backfill more history (150 messages) on first boot to cover the past week of news,
+            # then use a lightweight polling limit of 20 messages.
+            fetch_limit = 150 if is_first_run else 20
+            
             for channel in TARGET_CHANNELS:
-                async for message in client.iter_messages(channel, limit=20):
+                async for message in client.iter_messages(channel, limit=fetch_limit):
                     if not message.text:
                         continue
                     msg_id = str(message.id)
@@ -101,6 +107,8 @@ async def telegram_ingestion_worker():
                 logger.info(f"Injecting {len(new_documents)} new social media alerts into ChromaDB...")
                 vector_db.add_documents(new_documents)
                 update_bm25_retriever()
+                
+            is_first_run = False
         except Exception as e:
             logger.error(f"Telegram polling error: {e}")
             
@@ -166,6 +174,8 @@ class VerificationResponse(BaseModel):
     retrieved_context: List[Dict[str, Any]]
     reasoning: str
     processed_at: str
+    routing_destination: Optional[str] = None
+    summaries: Optional[Dict[str, str]] = None
 
 def execute_fact_checker_llm(claim: str, context_documents: List[str]) -> Dict[str, Any]:
     if not context_documents:
@@ -175,10 +185,68 @@ def execute_fact_checker_llm(claim: str, context_documents: List[str]) -> Dict[s
             "reasoning": "No supporting context documents were retrieved for this claim."
         }
 
+    context_blob = "\n\n".join(context_documents)
+    
+    # 1. Try strict verification using the Gemini API to prevent local model hallucinations
+    try:
+        import google.generativeai as genai
+        from src.config import GEMINI_API_KEY
+        
+        if not GEMINI_API_KEY:
+            raise ValueError("GEMINI_API_KEY is not configured.")
+            
+        genai.configure(api_key=GEMINI_API_KEY)
+        gemini_model = genai.GenerativeModel('gemini-2.5-flash-lite')
+        
+        prompt = (
+            "You are a strict fact-checking engine.\n"
+            "Task: Determine whether the claim is TRUE, FALSE, or UNVERIFIED based strictly on the provided context.\n"
+            "Rules:\n"
+            "- Use ONLY the provided context. Do not use outside knowledge.\n"
+            "- If the context does not explicitly confirm or refute the claim, the verdict MUST be UNVERIFIED.\n"
+            "- Do not make assumptions or extrapolate. If the documents talk about completely different topics, verdict is UNVERIFIED.\n"
+            "- Return ONLY valid JSON, no markdown, no prose.\n"
+            "- JSON schema: {\"verdict\":\"TRUE|FALSE|UNVERIFIED\",\"confidence_score\":float,\"reasoning\":\"string\"}.\n\n"
+            f"Claim:\n{claim}\n\n"
+            f"Context:\n{context_blob}\n"
+        )
+        
+        response = gemini_model.generate_content(prompt)
+        raw_text = response.text.strip().replace('```json', '').replace('```', '')
+        
+        try:
+            parsed = json.loads(raw_text)
+        except json.JSONDecodeError:
+            match = re.search(r"\{[\s\S]*\}", raw_text)
+            if not match:
+                raise RuntimeError(f"Gemini returned non-JSON output: {raw_text}")
+            parsed = json.loads(match.group(0))
+            
+        verdict = str(parsed.get("verdict", "UNVERIFIED")).upper()
+        if verdict not in {"TRUE", "FALSE", "UNVERIFIED"}:
+            verdict = "UNVERIFIED"
+            
+        confidence_raw = parsed.get("confidence_score", 0.0)
+        try:
+            confidence_score = float(confidence_raw)
+        except (TypeError, ValueError):
+            confidence_score = 0.0
+        confidence_score = max(0.0, min(1.0, confidence_score))
+        
+        reasoning = str(parsed.get("reasoning", "No reasoning provided.")).strip()
+        
+        return {
+            "verdict": verdict,
+            "confidence_score": confidence_score,
+            "reasoning": reasoning,
+        }
+    except Exception as e:
+        logger.warning(f"Gemini fact-checking failed (falling back to local GGUF model): {e}")
+
+    # 2. Fallback to Local GGUF if Gemini fails or is offline
     if extractor_model is None or not hasattr(extractor_model, "llm"):
         raise RuntimeError("Fact-checking model is not available.")
 
-    context_blob = "\n\n".join(context_documents)
     prompt = (
         "You are a strict fact-checking engine.\n"
         "Task: Determine whether the claim is TRUE, FALSE, or UNVERIFIED based strictly on the provided context.\n"
@@ -243,53 +311,55 @@ async def verify_claim(payload: VerificationRequest):
     if not payload.text.strip():
         raise HTTPException(status_code=400, detail="Input text stream cannot be empty.")
 
-    if extractor_model is None:
-        raise HTTPException(status_code=503, detail="Extractor model is not loaded. Check server logs.")
-    if vector_db is None:
-        raise HTTPException(status_code=503, detail="Vector database is not ready.")
-
     try:
-        # Step 1: Linguistic Extraction
-        extracted_claim = extractor_model.extract_claim(payload.text)
-        logger.info(f"Normalized Semantic Claim: {extracted_claim}")
-
-        # Step 2: Hybrid Context Retrieval (Chroma dense + BM25 sparse -> RRF -> rerank)
-        if retriever is None:
-            raise RuntimeError("Retriever is not initialised.")
-
-        retrieved = retriever.retrieve(
-            extracted_claim, candidates=RETRIEVAL_CANDIDATES, top_n=RETRIEVAL_TOP_N
-        )
-
+        # Run the multi-agent LangGraph workflow
+        logger.info(f"Invoking multi-agent LangGraph pipeline for input: {payload.text[:100]}...")
+        result = await asyncio.to_thread(run_fact_checker, payload.text)
+        
+        extracted_claim = result.get("extracted_claim", "")
+        routing_destination = result.get("routing_destination", "")
+        agent_outputs = result.get("agent_outputs", [])
+        final_verdict = result.get("final_verdict", {})
+        
+        # Format the context findings from active research agents
         formatted_context = []
-        raw_context_texts = []
-        for item in retrieved:
-            doc = item["doc"]
-            raw_context_texts.append(doc.page_content)
+        for out in agent_outputs:
             formatted_context.append({
-                "content": doc.page_content,
-                "distance_score": round(item["fused_score"], 6),
-                "source": f"{doc.metadata.get('source', 'Unknown')} [{'+'.join(item['sources'])}]",
-                "timestamp": doc.metadata.get("timestamp", "N/A"),
+                "content": out.get("findings", ""),
+                "distance_score": 0.0,
+                "source": f"{out.get('agent', 'Researcher')} [{out.get('source_type', 'unknown')}]",
+                "timestamp": datetime.utcnow().isoformat(),
             })
 
-        logger.info(f"Retrieved {len(formatted_context)} ranked context nodes (RRF + rerank).")
-
-        # Step 3: Fact-Checking Analysis (LLM with GBNF)
-        analysis = execute_fact_checker_llm(extracted_claim, raw_context_texts)
+        verdict = str(final_verdict.get("verdict", "UNVERIFIED")).upper()
+        
+        conf_str = str(final_verdict.get("confidence_score", "0%"))
+        try:
+            confidence_score = float(conf_str.replace("%", "").strip()) / 100.0
+        except Exception:
+            confidence_score = 0.0
+            
+        reasoning = str(final_verdict.get("rationale", "No explanation provided.")).strip()
+        summaries = final_verdict.get("summaries", {
+            "english": reasoning,
+            "sinhala": "තොරතුරු නොමැත",
+            "tamil": "தகவல் இல்லை"
+        })
 
         return VerificationResponse(
             raw_input=payload.text,
             extracted_claim_en=extracted_claim,
-            verdict=analysis["verdict"],
-            confidence_score=analysis["confidence_score"],
+            verdict=verdict,
+            confidence_score=confidence_score,
             retrieved_context=formatted_context,
-            reasoning=analysis["reasoning"],
-            processed_at=datetime.utcnow().isoformat()
+            reasoning=reasoning,
+            processed_at=datetime.utcnow().isoformat(),
+            routing_destination=routing_destination,
+            summaries=summaries
         )
 
     except Exception as e:
-        logger.error(f"Execution failure during request processing pipeline: {e}")
+        logger.error(f"Execution failure during multi-agent pipeline verification: {e}")
         raise HTTPException(status_code=500, detail=f"Internal Processing Exception: {str(e)}")
 
 @app.get("/api/v1/health")

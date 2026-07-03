@@ -1,13 +1,11 @@
-import torch
 from langchain.tools import tool
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import Chroma
 from langchain_community.retrievers import BM25Retriever
 from langchain_core.documents import Document
-from transformers import AutoModelForCausalLM, AutoTokenizer
-from peft import PeftModel
+from llama_cpp import Llama
 from src.config import (
-    LORA_ADAPTER_PATH, VECTOR_DB_DIR, EMBEDDING_MODEL_NAME, CHROMA_COLLECTION_NAME,
+    GGUF_MODEL_PATH, VECTOR_DB_DIR, EMBEDDING_MODEL_NAME, CHROMA_COLLECTION_NAME,
 )
 from src.rag.retriever import HybridRetriever
 
@@ -15,13 +13,18 @@ from src.rag.retriever import HybridRetriever
 _embeddings = None
 _vector_db = None
 _retriever = None
-_model = None
-_tokenizer = None
+_llm = None
 
 def get_embeddings():
     global _embeddings
     if _embeddings is None:
-        _embeddings = HuggingFaceEmbeddings(model_name=EMBEDDING_MODEL_NAME)
+        try:
+            _embeddings = HuggingFaceEmbeddings(
+                model_name=EMBEDDING_MODEL_NAME,
+                model_kwargs={"local_files_only": True}
+            )
+        except Exception:
+            _embeddings = HuggingFaceEmbeddings(model_name=EMBEDDING_MODEL_NAME)
     return _embeddings
 
 def get_vector_db():
@@ -53,24 +56,16 @@ def get_retriever():
         _retriever = HybridRetriever(db, bm25_retriever=bm25)
     return _retriever
 
-def get_model_and_tokenizer():
-    global _model, _tokenizer
-    if _model is None:
-        base_model_name = "unsloth/Phi-3.5-mini-instruct"
-        _tokenizer = AutoTokenizer.from_pretrained(base_model_name)
-
-        # Load base model in 4-bit for optimization
-        base_model = AutoModelForCausalLM.from_pretrained(
-            base_model_name,
-            load_in_4bit=True,
-            torch_dtype=torch.float16,
-            device_map="auto"
+def get_llama_model():
+    global _llm
+    if _llm is None:
+        _llm = Llama(
+            model_path=GGUF_MODEL_PATH,
+            n_gpu_layers=-1,
+            n_ctx=2048,
+            verbose=False
         )
-
-        # Load adapters (PEFT)
-        _model = PeftModel.from_pretrained(base_model, LORA_ADAPTER_PATH)
-        _model.eval()
-    return _model, _tokenizer
+    return _llm
 
 @tool
 def verify_claim_against_local_db(claim: str) -> str:
@@ -82,7 +77,18 @@ def verify_claim_against_local_db(claim: str) -> str:
     retrieved = get_retriever().retrieve(claim)
     context = "\n".join(item["doc"].page_content for item in retrieved)
 
-    model, tokenizer = get_model_and_tokenizer()
+    # Reuse the existing GGUF model instance already loaded in memory to prevent VRAM OOM / file locking
+    llm = None
+    try:
+        import src.main as main_module
+        if main_module.extractor_model is not None and hasattr(main_module.extractor_model, "llm"):
+            llm = main_module.extractor_model.llm
+    except Exception:
+        pass
+
+    if llm is None:
+        # Fallback if running outside the main API process
+        llm = get_llama_model()
     
     prompt = f"""<|system|>
 You are an expert fact-checker specialized in Sri Lankan social media claims. 
@@ -94,12 +100,13 @@ Claim: {claim}
 <|assistant|>
 """
     
-    inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
-    with torch.no_grad():
-        outputs = model.generate(**inputs, max_new_tokens=512)
+    response = llm(
+        prompt,
+        max_tokens=256,
+        temperature=0.2,
+        top_p=0.9,
+        echo=False
+    )
     
-    response = tokenizer.decode(outputs[0], skip_special_tokens=True)
-    if "<|assistant|>" in response:
-        response = response.split("<|assistant|>")[-1].strip()
-        
-    return response
+    result = response["choices"][0]["text"].strip()
+    return result

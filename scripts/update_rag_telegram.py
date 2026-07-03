@@ -34,7 +34,7 @@ from src.config import (
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)
 
-MESSAGES_PER_CHANNEL = 50
+MESSAGES_PER_CHANNEL = 300
 
 
 async def main() -> None:

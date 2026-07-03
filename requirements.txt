@@ -28,5 +28,5 @@ requests
 python-dotenv
 
 # --- Evaluation / testing ---
-scikit-learn                   # metrics in tests/benchmark_accuracy.py
+scikit-learn                   # metrics in evaluation/benchmark_accuracy.py
 pytest
