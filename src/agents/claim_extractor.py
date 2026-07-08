@@ -1,11 +1,6 @@
-import google.generativeai as genai
-import json
-from src.config import GEMINI_API_KEY
 from src.state import AgentState
+from src.models.extractor import get_extractor
 
-# Configure Gemini
-genai.configure(api_key=GEMINI_API_KEY)
-model = genai.GenerativeModel('gemini-2.5-flash-lite')
 
 def claim_extractor_agent(state: AgentState) -> dict:
     """

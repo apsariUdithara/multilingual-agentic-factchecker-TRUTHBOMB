@@ -1,11 +1,14 @@
-import google.generativeai as genai
 import json
+
+from google import genai
+
 from src.config import GEMINI_API_KEY
 from src.state import AgentState
 
-# Configure Gemini
-genai.configure(api_key=GEMINI_API_KEY)
-model = genai.GenerativeModel('gemini-2.5-flash-lite')
+# New unified SDK: the Client IS the callable surface (no GenerativeModel object).
+client = genai.Client(api_key=GEMINI_API_KEY)
+MODEL_NAME = "gemini-2.5-flash-lite"
+
 
 def synthesis_agent(state: AgentState) -> dict:
     """
@@ -13,11 +16,11 @@ def synthesis_agent(state: AgentState) -> dict:
     """
     claim = state.get("extracted_claim", "")
     agent_outputs = state.get("agent_outputs", [])
-    
+
     evidence_str = ""
     for output in agent_outputs:
         evidence_str += f"\n--- Agent: {output['agent']} ---\nFindings: {output['findings']}\n"
-    
+
     prompt = f"""
     You are a Final Verdict Specialist for a Sri Lankan Fact-Checking System.
     Based on the evidence gathered by researchers, provide a final verdict on the claim.
@@ -48,15 +51,13 @@ def synthesis_agent(state: AgentState) -> dict:
         }}
     }}
     """
-    
+
     try:
-        response = model.generate_content(prompt)
-        cleaned_response = response.text.strip().replace('```json', '').replace('```', '')
+        response = client.models.generate_content(model=MODEL_NAME, contents=prompt)
+        cleaned_response = response.text.strip().replace("```json", "").replace("```", "")
         final_verdict = json.loads(cleaned_response)
-        
-        return {
-            "final_verdict": final_verdict
-        }
+
+        return {"final_verdict": final_verdict}
     except Exception as e:
         print(f"Error in synthesis_agent: {e}")
         return {
@@ -67,7 +68,7 @@ def synthesis_agent(state: AgentState) -> dict:
                 "summaries": {
                     "english": "Could not verify the claim due to a system error.",
                     "sinhala": "පද්ධති දෝෂයක් හේතුවෙන් මෙම පකාශය තහවුරු කිරීමට නොහැකි විය.",
-                    "tamil": "கணினி பிழை காரணமாக உரிமைகோரலை சரிபார்க்க முடியவில்லை."
-                }
+                    "tamil": "கணினி பிழை காரணமாக உரிமைகோரலை சரிபார்க்க முடியவில்லை.",
+                },
             }
         }

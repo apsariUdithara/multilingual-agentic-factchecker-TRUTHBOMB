@@ -1,8 +1,21 @@
-import logging
-import json
-import re
-import asyncio
+"""
+FastAPI transport layer for the TruthBomb fact-checking engine.
+
+Thin HTTP boundary over the LangGraph pipeline (`src.pipeline.run_fact_checker`).
+The endpoint validates the request, runs the graph off the event loop, and maps
+the graph's final state onto the public response schema.
+
+Phase 5: the response now carries the canonical verdict (incl. MISLEADING),
+trilingual reasoning (EN/SI/TA), a per-node audit trail, and retrieved context
+built from the real re-ranked evidence.
+"""
+
 import os
+import asyncio
+import logging
+from datetime import datetime
+from typing import Any, Dict, List, Optional
+
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
@@ -166,13 +179,17 @@ class VerificationRequest(BaseModel):
     text: str
     metadata_hint: Optional[str] = None
 
+
 class VerificationResponse(BaseModel):
     raw_input: str
     extracted_claim_en: str
-    verdict: str
+    verdict: str                         # TRUE | FALSE | MISLEADING | UNVERIFIED
     confidence_score: float
+    reasoning: str                       # English
+    reasoning_si: str                    # Sinhala
+    reasoning_ta: str                    # Tamil
     retrieved_context: List[Dict[str, Any]]
-    reasoning: str
+    audit_trail: List[Dict[str, Any]]
     processed_at: str
     routing_destination: Optional[str] = None
     summaries: Optional[Dict[str, str]] = None
@@ -290,24 +307,38 @@ def execute_fact_checker_llm(claim: str, context_documents: List[str]) -> Dict[s
 
     confidence_raw = parsed.get("confidence_score", 0.0)
     try:
-        confidence_score = float(confidence_raw)
+        value = float(text)
     except (TypeError, ValueError):
-        confidence_score = 0.0
-    confidence_score = max(0.0, min(1.0, confidence_score))
+        return 0.0
+    if value > 1.0:  # value was expressed as a percentage
+        value /= 100.0
+    return max(0.0, min(1.0, value))
 
-    reasoning = str(parsed.get("reasoning", "No reasoning provided by model.")).strip()
 
-    return {
-        "verdict": verdict,
-        "confidence_score": confidence_score,
-        "reasoning": reasoning,
-    }
+def _build_context(retrieved_docs: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Adapt the re-ranked evidence into the frontend ContextSource shape."""
+    context: List[Dict[str, Any]] = []
+    for doc in retrieved_docs or []:
+        context.append(
+            {
+                "content": doc.get("content", ""),
+                "source": doc.get("source", "Unknown"),
+                "tier": doc.get("tier", ""),
+                "timestamp": doc.get("timestamp", "N/A"),
+                # `distance_score` retained for frontend compatibility; now holds the
+                # dense similarity (higher = closer), alongside the fused final_score.
+                "distance_score": doc.get("dense_similarity", 0.0),
+                "final_score": doc.get("final_score", 0.0),
+            }
+        )
+    return context
+
 
 # =====================================================================
 # API ROUTING LOGIC
 # =====================================================================
 @app.post("/api/v1/verify", response_model=VerificationResponse)
-async def verify_claim(payload: VerificationRequest):
+async def verify_claim(payload: VerificationRequest) -> VerificationResponse:
     if not payload.text.strip():
         raise HTTPException(status_code=400, detail="Input text stream cannot be empty.")
 
@@ -363,10 +394,13 @@ async def verify_claim(payload: VerificationRequest):
         raise HTTPException(status_code=500, detail=f"Internal Processing Exception: {str(e)}")
 
 @app.get("/api/v1/health")
-async def health_check():
-    is_ready = vector_db is not None
+async def health_check() -> Dict[str, Any]:
+    """Cheap liveness probe: graph is importable and the vector store exists on disk."""
+    db_path = os.path.join(VECTOR_DB_DIR, "chroma.sqlite3")
+    db_present = os.path.exists(db_path)
     return {
-        "status": "healthy" if is_ready else "unready",
+        "status": "healthy" if db_present else "degraded",
+        "graph_loaded": callable(run_fact_checker),
+        "vector_store_present": db_present,
         "timestamp": datetime.utcnow().isoformat(),
-        "database_connected": is_ready
     }

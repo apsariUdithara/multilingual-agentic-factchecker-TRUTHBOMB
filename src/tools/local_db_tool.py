@@ -27,13 +27,14 @@ def get_embeddings():
             _embeddings = HuggingFaceEmbeddings(model_name=EMBEDDING_MODEL_NAME)
     return _embeddings
 
+
 def get_vector_db():
     global _vector_db
     if _vector_db is None:
         _vector_db = Chroma(
             persist_directory=VECTOR_DB_DIR,
             embedding_function=get_embeddings(),
-            collection_name=CHROMA_COLLECTION_NAME
+            collection_name=CHROMA_COLLECTION_NAME,
         )
     return _vector_db
 
