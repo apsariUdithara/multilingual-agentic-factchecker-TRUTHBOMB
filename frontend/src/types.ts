@@ -23,7 +23,7 @@ export type Verdict = 'TRUE' | 'FALSE' | 'MISLEADING' | 'UNVERIFIED';
 export interface VerificationResponse {
   raw_input: string;
   extracted_claim_en: string;
-  verdict: Verdict;
+  verdict: 'TRUE' | 'FALSE' | 'UNVERIFIED' | 'MISLEADING';
   confidence_score: number;
   reasoning: string;     // English
   reasoning_si: string;  // Sinhala

@@ -7,9 +7,10 @@ venv/
 .pytest_cache/
 .env
 .env.local
+.ipynb_checkpoints/
 
 # --- ML Models & Large Files ---
-models/
+/models/
 *.gguf
 *.bin
 *.pt
@@ -36,6 +37,11 @@ frontend/npm-debug.log*
 frontend/yarn-debug.log*
 frontend/yarn-error.log*
 frontend/.pnpm-debug.log*
+frontend/.env
+frontend/.env.local
+frontend/.env.development.local
+frontend/.env.production.local
+frontend/.env.test.local
 
 # --- Documentation (Excluding core docs/) ---
 # This ignores all .md files EXCEPT those in the /docs/ folder

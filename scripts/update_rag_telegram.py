@@ -54,24 +54,14 @@ load_dotenv()
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger("ingest_worker")
 
-SESSION_NAME = os.path.join("scripts", os.getenv("TELEGRAM_SESSION", "rag_updater_session"))
-POLL_SECONDS = int(os.getenv("INGEST_POLL_SECONDS", "60"))
-CHANNEL_LIMIT = int(os.getenv("INGEST_CHANNEL_LIMIT", "20"))
+MESSAGES_PER_CHANNEL = 300
 
 
-def _load_credentials() -> Tuple[int, str]:
-    """Read Telegram API credentials from the environment (never hardcoded)."""
-    api_id = os.getenv("TELEGRAM_API_ID")
-    api_hash = os.getenv("TELEGRAM_API_HASH")
-    if not api_id or not api_hash:
-        raise RuntimeError(
-            "TELEGRAM_API_ID and TELEGRAM_API_HASH must be set in the environment (.env)."
-        )
-    return int(api_id), api_hash
+async def main() -> None:
+    if not TELEGRAM_API_ID or not TELEGRAM_API_HASH:
+        logger.error("TELEGRAM_API_ID / TELEGRAM_API_HASH not set in .env. Aborting.")
+        return
 
-
-def _get_vector_db() -> Chroma:
-    """Open the persisted ChromaDB collection with the project's embedding model."""
     embeddings = HuggingFaceEmbeddings(model_name=EMBEDDING_MODEL_NAME)
     return Chroma(
         persist_directory=VECTOR_DB_DIR,
