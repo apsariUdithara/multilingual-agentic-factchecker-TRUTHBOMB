@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { FactCheckerForm } from './components/FactCheckerForm'
 import { ResultCard } from './components/ResultCard'
 import { ContextSources } from './components/ContextSources'
+import { LatestNewsTicker } from './components/LatestNewsTicker'
 import { VerificationResponse } from './types'
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { AlertCircle } from "lucide-react"
@@ -10,6 +11,7 @@ function App() {
   const [isLoading, setIsLoading] = useState(false)
   const [result, setResult] = useState<VerificationResponse | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [selectedNewsText, setSelectedNewsText] = useState<string>('')
 
   const handleVerify = async (text: string) => {
     setIsLoading(true)
@@ -40,6 +42,12 @@ function App() {
     }
   }
 
+  const handleSelectNews = (text: string) => {
+    setSelectedNewsText(text)
+    // Scroll down smoothly to input form
+    window.scrollTo({ top: 300, behavior: 'smooth' })
+  }
+
   return (
     <div className="min-h-screen w-full bg-slate-50 relative overflow-auto py-12 px-4">
       {/* Background Gradient */}
@@ -52,7 +60,7 @@ function App() {
       />
 
       <div className="relative z-10 max-w-4xl mx-auto">
-        <header className="text-center mb-12">
+        <header className="text-center mb-8">
           <h1 className="text-4xl font-extrabold tracking-tight lg:text-5xl mb-4">
             Social Media Fact-Checker
           </h1>
@@ -62,7 +70,10 @@ function App() {
         </header>
 
         <main className="space-y-8">
-          <FactCheckerForm onVerify={handleVerify} isLoading={isLoading} />
+          {/* Live Confirmed News Ticker Panel */}
+          <LatestNewsTicker onSelectNews={handleSelectNews} />
+
+          <FactCheckerForm onVerify={handleVerify} isLoading={isLoading} initialText={selectedNewsText} />
 
           {error && (
             <Alert variant="destructive" className="max-w-2xl mx-auto">

@@ -8,14 +8,21 @@ import { Loader2, ImageUp, X } from "lucide-react";
 interface FactCheckerFormProps {
   onVerify: (text: string) => void;
   isLoading: boolean;
+  initialText?: string;
 }
 
-export const FactCheckerForm: React.FC<FactCheckerFormProps> = ({ onVerify, isLoading }) => {
-  const [input, setInput] = useState('');
+export const FactCheckerForm: React.FC<FactCheckerFormProps> = ({ onVerify, isLoading, initialText = '' }) => {
+  const [input, setInput] = useState(initialText);
   const [isOcrLoading, setIsOcrLoading] = useState(false);
   const [ocrProgress, setOcrProgress] = useState(0);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  React.useEffect(() => {
+    if (initialText) {
+      setInput(initialText);
+    }
+  }, [initialText]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

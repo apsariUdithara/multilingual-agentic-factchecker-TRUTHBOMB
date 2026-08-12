@@ -24,4 +24,7 @@ export interface VerificationResponse {
     sinhala: string;
     tamil: string;
   };
+  debater_a_claim?: string;
+  debater_b_claim?: string;
+  consensus_status?: string;
 }

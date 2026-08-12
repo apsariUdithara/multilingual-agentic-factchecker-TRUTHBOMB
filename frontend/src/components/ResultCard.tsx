@@ -49,6 +49,38 @@ export const ResultCard: React.FC<ResultCardProps> = ({ data }) => {
           <p className="text-lg font-medium">{data.extracted_claim_en}</p>
         </div>
 
+        {/* Dual-Debater Consensus Panel */}
+        {(data.debater_a_claim || data.debater_b_claim) && (
+          <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                Multi-LLM Debate & Arbitration
+              </span>
+              <Badge 
+                className={cn(
+                  "text-[10px] font-bold px-2 py-0.5 uppercase",
+                  data.consensus_status === 'AGREEMENT' 
+                    ? "bg-emerald-100 text-emerald-800 border-emerald-200" 
+                    : "bg-amber-100 text-amber-800 border-amber-200"
+                )}
+              >
+                {data.consensus_status === 'AGREEMENT' ? '✓ Consensus Reached' : '⚡ Arbitrated Divergence'}
+              </Badge>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+              <div className="bg-white p-3 rounded-lg border border-slate-100 shadow-2xs">
+                <span className="font-semibold text-slate-500 block mb-1">Debater A (Fine-Tuned GGUF):</span>
+                <p className="text-slate-700 italic">"{data.debater_a_claim || data.extracted_claim_en}"</p>
+              </div>
+              <div className="bg-white p-3 rounded-lg border border-slate-100 shadow-2xs">
+                <span className="font-semibold text-slate-500 block mb-1">Debater B (Cloud Gemini):</span>
+                <p className="text-slate-700 italic">"{data.debater_b_claim || data.extracted_claim_en}"</p>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="flex items-center gap-8">
           <div>
             <h4 className="text-sm font-semibold text-muted-foreground mb-1">Confidence</h4>
