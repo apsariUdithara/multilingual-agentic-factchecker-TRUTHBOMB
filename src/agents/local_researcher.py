@@ -3,10 +3,12 @@ from src.tools.local_db_tool import verify_claim_against_local_db, get_retriever
 
 def local_researcher_agent(state: AgentState) -> dict:
     """
-    Uses the local vector DB (OSINT context) to verify the extracted claim.
+    Local verify node.
+    Extracts document proofs, verifies with GGUF model, and falls back to live web search
+    if local OSINT DB lacks evidence.
     """
     claim = state.get("extracted_claim", "")
-    
+
     try:
         # Extract raw document proofs with exact metadata (Source name, Timestamp)
         retrieved_items = get_retriever().retrieve(claim)
@@ -54,7 +56,11 @@ def local_researcher_agent(state: AgentState) -> dict:
                 print(f"Fallback web search error: {web_err}")
 
         return {
-            "agent_outputs": current_outputs
+            "agent_outputs": current_outputs,
+            "retrieved_docs": doc_proofs,
+            "audit_trail": [
+                {"node": "local_researcher", "status": "ok", "detail": verification_summary[:160]}
+            ]
         }
     except Exception as e:
         print(f"Error in local_researcher_agent: {e}")
@@ -63,5 +69,8 @@ def local_researcher_agent(state: AgentState) -> dict:
                 "agent": "local_researcher",
                 "findings": f"Failed to perform local database research: {e}",
                 "source_type": "error"
-            }]
+            }],
+            "audit_trail": [
+                {"node": "local_researcher", "status": "error", "detail": str(e)[:160]}
+            ]
         }

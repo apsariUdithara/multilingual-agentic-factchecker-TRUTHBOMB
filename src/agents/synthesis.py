@@ -1,11 +1,14 @@
-import google.generativeai as genai
 import json
+
+from google import genai
+
 from src.config import GEMINI_API_KEY
 from src.state import AgentState
 
-# Configure Gemini
-genai.configure(api_key=GEMINI_API_KEY)
-model = genai.GenerativeModel('gemini-2.5-flash-lite')
+# New unified SDK: the Client IS the callable surface (no GenerativeModel object).
+client = genai.Client(api_key=GEMINI_API_KEY)
+MODEL_NAME = "gemini-2.5-flash-lite"
+
 
 def synthesis_agent(state: AgentState) -> dict:
     """
@@ -18,11 +21,11 @@ def synthesis_agent(state: AgentState) -> dict:
     claim_b = state.get("extracted_claim_b", state.get("extracted_claim", ""))
     initial_consensus = state.get("consensus_status", "AGREEMENT")
     agent_outputs = state.get("agent_outputs", [])
-    
+
     evidence_str = ""
     for output in agent_outputs:
         evidence_str += f"\n--- Researcher Agent: {output['agent']} ({output.get('source_type', 'unknown')}) ---\nFindings: {output['findings']}\n"
-    
+
     prompt = f"""
     You are the Chief Fact-Checking Arbitrator & Judge for a Sri Lankan Social Media Fact-Checking Platform.
     Two independent AI debaters have extracted the claim from the raw user post:
@@ -65,10 +68,10 @@ def synthesis_agent(state: AgentState) -> dict:
         }}
     }}
     """
-    
+
     try:
-        response = model.generate_content(prompt)
-        cleaned_response = response.text.strip().replace('```json', '').replace('```', '')
+        response = client.models.generate_content(model=MODEL_NAME, contents=prompt)
+        cleaned_response = response.text.strip().replace("```json", "").replace("```", "")
         final_verdict = json.loads(cleaned_response)
         
         # Ensure debater claims are present in final payload
@@ -95,7 +98,7 @@ def synthesis_agent(state: AgentState) -> dict:
                 "summaries": {
                     "english": "Could not verify the claim due to a system error.",
                     "sinhala": "පද්ධති දෝෂයක් හේතුවෙන් මෙම පකාශය තහවුරු කිරීමට නොහැකි විය.",
-                    "tamil": "கணினி பிழை காரணமாக உரிமைகோரலை சரிபார்க்க முடியவில்லை."
-                }
+                    "tamil": "கணினி பிழை காரணமாக உரிமைகோரலை சரிபார்க்க முடியவில்லை.",
+                },
             }
         }
