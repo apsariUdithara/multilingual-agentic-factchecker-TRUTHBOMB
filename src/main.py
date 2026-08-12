@@ -3,6 +3,9 @@ import json
 import re
 import asyncio
 import os
+import hashlib
+import urllib.request
+import xml.etree.ElementTree as ET
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
@@ -112,7 +115,85 @@ async def telegram_ingestion_worker():
         except Exception as e:
             logger.error(f"Telegram polling error: {e}")
             
-        await asyncio.sleep(60)
+        # Poll automatically every 300 seconds (5 minutes)
+        await asyncio.sleep(300)
+
+async def rss_ingestion_worker():
+    logger.info("Starting Multi-Source Live RSS Data Ingestion Worker (5-minute cron loop)...")
+    rss_feeds = {
+        "AdaDerana-RSS": "http://www.adaderana.lk/rss.php",
+        "GoogleNews-LK-EN": "https://news.google.com/rss/search?q=Sri+Lanka&hl=en-LK&gl=LK&ceid=LK:en",
+        "GoogleNews-LK-SI": "https://news.google.com/rss/search?q=Sri+Lanka&hl=si&gl=LK&ceid=LK:si",
+        "GoogleNews-LK-Breaking-Local": "https://news.google.com/rss/search?q=Sri+Lanka+police+OR+drown+OR+accident+OR+remanded+OR+court&hl=en-LK&gl=LK&ceid=LK:en",
+        "NewsWire-LK": "https://www.newswire.lk/feed/",
+        "EconomyNext": "https://economynext.com/feed/"
+    }
+    
+    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
+    
+    while True:
+        try:
+            if vector_db is None:
+                await asyncio.sleep(10)
+                continue
+                
+            current_data = vector_db.get(include=["metadatas"])
+            existing_ids = set()
+            if current_data and "metadatas" in current_data:
+                existing_ids = {
+                    meta.get("message_id") 
+                    for meta in current_data["metadatas"] 
+                    if meta and "message_id" in meta
+                }
+
+            new_documents = []
+            
+            for source_name, feed_url in rss_feeds.items():
+                try:
+                    req = urllib.request.Request(feed_url, headers=headers)
+                    with urllib.request.urlopen(req, timeout=12) as resp:
+                        xml_data = resp.read()
+                        root = ET.fromstring(xml_data)
+                        items = root.findall(".//item")
+                        
+                        for item in items:
+                            title = item.findtext("title", default="").strip()
+                            desc = item.findtext("description", default="").strip()
+                            link = item.findtext("link", default="").strip()
+                            pub_date = item.findtext("pubDate", default=datetime.utcnow().isoformat())
+                            
+                            if not title:
+                                continue
+                                
+                            article_id = hashlib.md5(link.encode("utf-8")).hexdigest()
+                            if article_id in existing_ids:
+                                continue
+                                
+                            content = f"Title: {title}\nSummary: {desc}\nURL: {link}"
+                            doc = Document(
+                                page_content=content,
+                                metadata={
+                                    "source": f"RSS-{source_name}",
+                                    "message_id": article_id,
+                                    "timestamp": pub_date,
+                                    "ingested_at": datetime.utcnow().isoformat()
+                                }
+                            )
+                            new_documents.append(doc)
+                            existing_ids.add(article_id)
+                except Exception as feed_err:
+                    logger.warning(f"RSS fetch warning for {source_name}: {feed_err}")
+            
+            if new_documents:
+                logger.info(f"Injecting {len(new_documents)} multi-source RSS news articles into ChromaDB...")
+                vector_db.add_documents(new_documents)
+                update_bm25_retriever()
+                
+        except Exception as e:
+            logger.error(f"RSS ingestion worker error: {e}")
+            
+        # Poll automatically every 300 seconds (5 minutes)
+        await asyncio.sleep(300)
 
 def update_bm25_retriever():
     global bm25_retriever
@@ -156,8 +237,9 @@ async def startup_event():
         extractor_model = None
         logger.exception("Failed to load LinguisticExtractor: %s", e)
 
-    # Start Telegram background ingestion
+    # Start Telegram & Multi-Source RSS background ingestion workers
     asyncio.create_task(telegram_ingestion_worker())
+    asyncio.create_task(rss_ingestion_worker())
 
 # =====================================================================
 # DATA TRANSFER OBJECTS (SCHEMAS)
@@ -176,6 +258,9 @@ class VerificationResponse(BaseModel):
     processed_at: str
     routing_destination: Optional[str] = None
     summaries: Optional[Dict[str, str]] = None
+    debater_a_claim: Optional[str] = None
+    debater_b_claim: Optional[str] = None
+    consensus_status: Optional[str] = None
 
 def execute_fact_checker_llm(claim: str, context_documents: List[str]) -> Dict[str, Any]:
     if not context_documents:
@@ -324,12 +409,21 @@ async def verify_claim(payload: VerificationRequest):
         # Format the context findings from active research agents
         formatted_context = []
         for out in agent_outputs:
-            formatted_context.append({
-                "content": out.get("findings", ""),
-                "distance_score": 0.0,
-                "source": f"{out.get('agent', 'Researcher')} [{out.get('source_type', 'unknown')}]",
-                "timestamp": datetime.utcnow().isoformat(),
-            })
+            if "retrieved_docs" in out and out["retrieved_docs"]:
+                for doc_item in out["retrieved_docs"]:
+                    formatted_context.append({
+                        "content": doc_item.get("content", ""),
+                        "distance_score": doc_item.get("distance_score", 0.0),
+                        "source": doc_item.get("source", "Official News Feed"),
+                        "timestamp": doc_item.get("timestamp", datetime.utcnow().isoformat()),
+                    })
+            else:
+                formatted_context.append({
+                    "content": out.get("findings", ""),
+                    "distance_score": 0.0,
+                    "source": f"{out.get('agent', 'Researcher')} [{out.get('source_type', 'unknown')}]",
+                    "timestamp": datetime.utcnow().isoformat(),
+                })
 
         verdict = str(final_verdict.get("verdict", "UNVERIFIED")).upper()
         
@@ -346,6 +440,10 @@ async def verify_claim(payload: VerificationRequest):
             "tamil": "தகவல் இல்லை"
         })
 
+        debater_a_claim = str(final_verdict.get("debater_a_claim", result.get("extracted_claim_a", extracted_claim)))
+        debater_b_claim = str(final_verdict.get("debater_b_claim", result.get("extracted_claim_b", extracted_claim)))
+        consensus_status = str(final_verdict.get("consensus_status", result.get("consensus_status", "AGREEMENT")))
+
         return VerificationResponse(
             raw_input=payload.text,
             extracted_claim_en=extracted_claim,
@@ -355,7 +453,10 @@ async def verify_claim(payload: VerificationRequest):
             reasoning=reasoning,
             processed_at=datetime.utcnow().isoformat(),
             routing_destination=routing_destination,
-            summaries=summaries
+            summaries=summaries,
+            debater_a_claim=debater_a_claim,
+            debater_b_claim=debater_b_claim,
+            consensus_status=consensus_status
         )
 
     except Exception as e:
@@ -370,3 +471,28 @@ async def health_check():
         "timestamp": datetime.utcnow().isoformat(),
         "database_connected": is_ready
     }
+
+@app.get("/api/v1/news/latest")
+async def get_latest_news():
+    if vector_db is None:
+        return {"news": [], "total_count": 0}
+    try:
+        all_data = vector_db.get(include=["documents", "metadatas"])
+        docs = all_data.get("documents", [])
+        metas = all_data.get("metadatas", [])
+        
+        latest_items = []
+        for i in range(min(10, len(docs))):
+            idx = len(docs) - 1 - i
+            content = docs[idx]
+            meta = metas[idx] if idx < len(metas) else {}
+            latest_items.append({
+                "id": meta.get("message_id", str(idx)),
+                "source": meta.get("source", "Official News Feed"),
+                "timestamp": meta.get("timestamp", meta.get("ingested_at", "Just now")),
+                "content": content
+            })
+        return {"news": latest_items, "total_count": len(docs)}
+    except Exception as e:
+        logger.error(f"Error fetching latest news: {e}")
+        return {"news": [], "total_count": 0}

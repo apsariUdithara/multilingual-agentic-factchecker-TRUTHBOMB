@@ -40,6 +40,13 @@ def get_vector_db():
 def get_retriever():
     """Build (once) the same hybrid retriever the API uses, over the local DB."""
     global _retriever
+    try:
+        import src.main as main_module
+        if main_module.retriever is not None:
+            return main_module.retriever
+    except Exception:
+        pass
+
     if _retriever is None:
         db = get_vector_db()
         bm25 = None
@@ -75,7 +82,17 @@ def verify_claim_against_local_db(claim: str) -> str:
     """
     # Same hybrid retrieval the API uses: dense + sparse + RRF + rerank.
     retrieved = get_retriever().retrieve(claim)
-    context = "\n".join(item["doc"].page_content for item in retrieved)
+    
+    if not retrieved:
+        return "No relevant context found in local database."
+
+    context_docs = []
+    for idx, item in enumerate(retrieved[:3]):
+        source = item['doc'].metadata.get('source', 'Unknown')
+        content = item['doc'].page_content.strip()
+        context_docs.append(f"[Document {idx+1} | Source: {source}]\n{content}")
+        
+    context_blob = "\n\n".join(context_docs)
 
     # Reuse the existing GGUF model instance already loaded in memory to prevent VRAM OOM / file locking
     llm = None
@@ -91,10 +108,13 @@ def verify_claim_against_local_db(claim: str) -> str:
         llm = get_llama_model()
     
     prompt = f"""<|system|>
-You are an expert fact-checker specialized in Sri Lankan social media claims. 
-Use the following context from official news reports and social media archives to verify the claim.
+You are a factual Sri Lankan news analyst. 
+Analyze whether the retrieved context contains evidence directly supporting or refuting the claim.
+Rules:
+- If the context contains news about the exact incident, summarize the facts accurately.
+- Do NOT confuse different incidents in different locations. If context describes a completely different location or event, state that context does not match.
 Context:
-{context}
+{context_blob}
 <|user|>
 Claim: {claim}
 <|assistant|>
@@ -103,10 +123,10 @@ Claim: {claim}
     response = llm(
         prompt,
         max_tokens=256,
-        temperature=0.2,
+        temperature=0.0,
         top_p=0.9,
         echo=False
     )
     
-    result = response["choices"][0]["text"].strip()
-    return result
+    llm_analysis = response["choices"][0]["text"].strip()
+    return f"--- Retrieved Ground-Truth Documents ---\n{context_blob}\n\n--- Local Model Analysis ---\n{llm_analysis}"
