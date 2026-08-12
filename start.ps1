@@ -49,7 +49,7 @@ try {
         Set-Location ..
     }
 
-    Start-ManagedProcess -Name "FastAPI Backend" -Command "Set-Location '$PSScriptRoot'; & '$PythonPath' -m uvicorn src.main:app --port 8000"
+    Start-ManagedProcess -Name "FastAPI Backend" -Command "Set-Location '$PSScriptRoot'; & '$PythonPath' -m uvicorn src.main:app --port 8000 --reload"
     Start-ManagedProcess -Name "React Frontend" -Command "Set-Location '$PSScriptRoot\frontend'; & '$NpmPath' run dev"
 
     Write-Host "All services started. Press Ctrl+C in this window to stop all services."
